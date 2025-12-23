@@ -1,24 +1,21 @@
 'use client';
-
 import { useEffect, useState } from "react";
 
 export default function Page()
 {
-    const [data, setData] = useState('');
+    const[json, setJson] = useState({});
 
     useEffect(() => 
     {
-        const dataObjString = sessionStorage.getItem('data',undefined);
-        if(!dataObjString) return;
-        
-        const dataObj = JSON.parse(dataObjString);
-        setData(dataObj);
-        console.log(dataObj);
-    },[])
+        const data = sessionStorage.getItem('storyData');
+        const json = JSON.parse(data);
+        console.log(json);
+    },[]);
+    
 
     return (
-        <div className="w-screen h-screen bg-deep-space-blue">
-            {data}
+        <div className="w-screen h-screen bg-amber-200 flex flex-col">
+            <pre>{JSON.stringify(json, null, 2)}</pre>
         </div>
     );
 }
