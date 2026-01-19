@@ -1,85 +1,59 @@
 "use client";
-import React, { useState, useCallback } from "react";
-import { Handle, Position, useReactFlow, useUpdateNodeInternals, useNodeConnections} from "@xyflow/react";
-
+import React, { useCallback } from "react";
+import { Handle, Position, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import Toolbar from "../NodeToolbar";
 import Choices from "../Choices";
 
-export default function NormalSlideNode({ id, selected, data}) 
-{
+export default function NormalSlideNode({ id, selected, data }) {
+  const { updateNodeData, setNodes, setEdges } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
-  const {setNodes, setEdges} = useReactFlow();
-  const [choices, setChoices] = useState([""]);
 
-  const addChoiceCallback = useCallback(() => 
-  {
-    if(!data.choices) data.choices = [];
+  const handleTextChange = useCallback((e) => {
+    updateNodeData(id, { text: e.target.value });
+  }, [id, updateNodeData]);
 
-    const choiceObj = {content: "", connection: null};
-    data.choices.push(choiceObj);
+  const handleChoiceChange = useCallback((idx, newValue) => {
+    const newChoices = [...(data.choices || [])];
+    newChoices[idx] = { ...newChoices[idx], content: newValue };
+    updateNodeData(id, { choices: newChoices });
+  }, [id, data.choices, updateNodeData]);
+
+  const addChoice = useCallback(() => {
+    const currentChoices = data.choices || [];
+    if (currentChoices.length >= 6) return; // Limit choices
     
-    addChoice(choices, setChoices, id, updateNodeInternals);
-  }, [choices, id, updateNodeInternals]);
+    updateNodeData(id, {
+      choices: [...currentChoices, { content: "", connection: null }]
+    });
+    // Force handle update
+    setTimeout(() => updateNodeInternals(id), 0);
+  }, [id, data.choices, updateNodeData, updateNodeInternals]);
 
-  const deleteNodeCallback = useCallback(() => 
-  {
+  const deleteNode = useCallback(() => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
   }, [id, setNodes, setEdges]);
 
-  function setContent(event)
-  {
-    data.text = event.target.value;
-  }
-
-  function handleChoiceSelection(event, idx)
-  {
-    const choice = data.choices[idx];
-    
-    if(!choice)
-    {
-      const choiceObj = {content: event.target.value, connection: null};
-      data.choices[idx] = choiceObj;
-      return;
-    }
-
-    choice.content = event.target.value;
-  }
-  
-  function handleConnection(event, idx)
-  {
-    const choice = data.choices[idx];
-    
-    if(!choice)
-    {
-      const choiceObj = {content: "", connection: event.target};
-      data.choices[idx] = choiceObj;
-      return;
-    }
-
-    choice.connection = event.target;
-  }
-
   return (
-    <div className={`bg-shadow-grey p-2 min-h-32 h-max min-w-48 font-outfit rounded-lg shadow-xl text-white border-tiger-orange ${selected ? " border" : ""}`}>
-      <Handle type="target" position={Position.Left} id="target"/>
-      <div className="nodrag flex flex-col mt-12">
-        <textarea type="text" onChange={setContent} placeholder="Enter text here.." className="bg-deep-space-blue rounded focus:outline-tiger-orange focus:outline-1 p-1 text-xs font-extralight w-full"/>
-        <Choices choices={choices} setChoice={handleChoiceSelection} handleConnection={handleConnection}/>
+    <div className={`bg-shadow-grey p-3 w-64 rounded-lg shadow-xl text-white transition-all duration-200 ${selected ? "ring-2 ring-tiger-orange" : "border border-white/10"}`}>
+      <Handle type="target" position={Position.Left} className="!bg-white !w-3 !h-3" />
+      
+      <Toolbar onAddChoice={addChoice} onDeleteNode={deleteNode} />
+
+      <div className="flex flex-col gap-3 mt-2 nodrag cursor-default">
+        <label className="text-[10px] uppercase tracking-wider text-white/50 font-bold">Text Content</label>
+        <textarea
+          value={data.text || ""}
+          onChange={handleTextChange}
+          placeholder="Type your story segment..."
+          className="bg-deep-space-blue rounded p-2 text-sm font-light w-full h-24 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange border border-transparent"
+        />
+        
+        <div className="mt-1">
+            <label className="text-[10px] uppercase tracking-wider text-white/50 font-bold">Decisions</label>
+            <Choices choices={data.choices || []} onChoiceChange={handleChoiceChange} />
+        </div>
       </div>
-      <Toolbar addChoice={addChoiceCallback} deleteNode={deleteNodeCallback} />
     </div>
   );
-}
-
-function addChoice(choices, setChoices, id, updateNodeInternals) 
-{
-  if (choices.length === 9) return;
-
-  setChoices((prev) => 
-  {
-    const next = [...prev, ""];
-    updateNodeInternals(id);
-    return next;
-  });
 }

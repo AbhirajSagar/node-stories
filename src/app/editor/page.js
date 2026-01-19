@@ -1,258 +1,219 @@
 "use client";
 
-import NormalSlideNode from "../components/customNodes/NormalSlideNode";
-import TextImageSlideNode from "../components/customNodes/TextImageSlideNode";
-import TextVideoSlideNode from "../components/customNodes/TextVideoSlideNode";
-
-import { useState, useCallback, use } from "react";
-import { ReactFlow, applyNodeChanges, applyEdgeChanges, addEdge, Background, BackgroundVariant, ReactFlowProvider } from "@xyflow/react";
+import { useState, useCallback, useEffect } from "react";
+import { ReactFlow, applyNodeChanges, applyEdgeChanges, addEdge, Background, BackgroundVariant, ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFile, faFileAlt, faEye,faEyeSlash, faTrash, faCopy, faFloppyDisk, faVideo, faRotate, faDownload, faPlayCircle } from "@fortawesome/free-solid-svg-icons";
-import { useReactFlow } from "@xyflow/react";
+import { faFloppyDisk, faPlay, faCog } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 
-const nodeTypes = 
-{
-    normal: NormalSlideNode,
-    image: TextImageSlideNode,
-    video: TextVideoSlideNode,
+// Components
+import NormalSlideNode from "@/app/components/customNodes/NormalSlideNode";
+import TextImageSlideNode from "@/app/components/customNodes/TextImageSlideNode";
+import TextVideoSlideNode from "@/app/components/customNodes/TextVideoSlideNode";
+import { PaneContextMenu, EdgeContextMenu, ContextMenu } from "@/app/components/EditorMenu";
+import { Settings } from "@/app/components/StorySettings";
+import extractFlowData from "@/app/utils/flowExtractor";
+
+const nodeTypes = {
+  normal: NormalSlideNode,
+  image: TextImageSlideNode,
+  video: TextVideoSlideNode,
 };
 
-const flowKey = "savedFlowData";
+const STORAGE_KEY = "wip_story_flow";
+const PLAYER_STORAGE_KEY = "player_story_data";
 
-export default function Page()
-{
-
-    return (
-        <ReactFlowProvider>
-            <Editor />
-        </ReactFlowProvider>
-    );
+export default function Page() {
+  return (
+    <ReactFlowProvider>
+      <EditorArea />
+    </ReactFlowProvider>
+  );
 }
 
-function Editor()
-{
-    const [nodes, setNodes] = useState([]);
-    const [edges, setEdges] = useState([]);
-    const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
-    const [nodesData, setNodesData] = useState([]);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [menuContent, setMenuContent] = useState(<PaneContextMenu />);
-    const [rfInstance, setReactFlowInstance] = useState(null);
-    const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-    const { setViewport } = useReactFlow();
-    const router = useRouter();
+function EditorArea() {
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
+  
+  // UI State
+  const [menuState, setMenuState] = useState({ isOpen: false, x: 0, y: 0, type: null, edge: null });
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // Story Data State
+  const [meta, setMeta] = useState({ name: "", description: "", appearance: {}, timing: { delay: 0 } });
+  
+  const { toObject } = useReactFlow();
+  const router = useRouter();
 
-    const onNodesChange = useCallback((c) => setNodes((n) => applyNodeChanges(c, n)), []);
-    const onEdgesChange = useCallback((c) => setEdges((e) => applyEdgeChanges(c, e)), []);
-    const onConnect = useCallback((p) => 
-    {
-        setEdges((e) => addEdge(p, e))
-    }, []);
-    const onSave = useCallback(handleSave, [rfInstance]);
-    const onRestore = useCallback(handleRestore, [setNodes, setViewport]);
+  // --- Handlers ---
 
-    function handleRestore()
-    {
-        restoreFlow();
-    }
+  const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
+  const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
+  
+  const onConnect = useCallback((params) => {
+    // Only allow one connection per source handle
+    setEdges((eds) => {
+        const existing = eds.find(e => e.source === params.source && e.sourceHandle === params.sourceHandle);
+        if (existing) return eds; // Block multiple connections from same choice
+        return addEdge({ ...params, type: 'default', animated: true }, eds);
+    });
+  }, []);
 
-    async function restoreFlow()
-    {
-        const flow = JSON.parse(localStorage.getItem(flowKey));
-        if(!flow) return;
-        const { x = 0, y = 0, zoom = 1 } = flow.viewport;
-        setNodes(flow.nodes || []);
-        setEdges(flow.edges || []);
-        setViewport({ x, y, zoom });
-    }
+  // --- Persistence ---
 
-    function handleSave()
-    {
-        if(!rfInstance) return;
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const json = JSON.parse(saved);
+        const { slides, ...rest } = extractFlowData(json, 0.1);
+        
+        // Restore Meta
+        setMeta(rest);
 
-        const flow = rfInstance.toObject();
-        localStorage.setItem(flowKey, JSON.stringify(flow));
-    }
-
-    function handleContextMenu(menu, event) 
-    {
-        event.preventDefault();
-        setMenuPos({ x: event.clientX, y: event.clientY });
-        setMenuContent(menu);
-        setIsMenuOpen(true);
-    }
-
-    function deleteNode(id) 
-    {
-        setNodes(nodes.filter((n) => n.id !== id));
-        setIsMenuOpen(false);
-    }
-
-
-    function addNode(nodeType, position) 
-    {
-        const randomId = crypto.randomUUID();
-        const newNode = 
-        {
-            id: randomId,
-            type: nodeType,
-            data: 
-            {
-                text: "",
-                choices: [],
-            },
-            position: position,
-        };
-
-        setNodes([...nodes, newNode]);
-        setIsMenuOpen(false);
-    }
-
-    function deleteEdge(id) 
-    {
-        setEdges(edges.filter((e) => e.id !== id));
-        setIsMenuOpen(false);
-    }   
-
-    function getStoryJsonObj()
-    {
-        const slidesArray = [];
-        for(let node of nodes)
-        {
-            slidesArray.push(
-            {
-                id: node.id,
-                type: node.type,
-                data: node.data
-            });
+        // Restore Nodes/Edges logic would go here. 
+        // Note: The provided `extractFlowData` returns a simplified slide structure.
+        // For the EDITOR, we ideally save the raw ReactFlow object.
+        // For this refactor, I will assume we are restoring the ReactFlow object if available.
+        if (json.flow) {
+            setNodes(json.flow.nodes || []);
+            setEdges(json.flow.edges || []);
+        } else if (slides.length > 0) {
+            // Fallback: reconstruct nodes from slides (simplified logic)
+            const reconstructed = slides.map((s, i) => ({
+                id: s.id, type: s.type, position: {x: i*300, y: 0}, data: s.data
+            }));
+            setNodes(reconstructed);
         }
-
-        const storyObj = 
-        {
-            version: 0.1,
-            slides: [slidesArray],
-        };
-
-        return storyObj;
+      } catch (e) { console.error("Load failed", e); }
     }
+  }, []);
 
-    function playStory()
-    {
-        const data = getStoryJsonObj();
-        sessionStorage.setItem('storyData', JSON.stringify(data));
-        router.push('/player');
+  const handleSave = () => {
+    const flow = toObject();
+    const dataToSave = {
+        version: 0.1,
+        flow, // Save raw editor state for editing
+        ...meta, // Spread meta (name, desc, appearance, timing)
+        // Also generate the "Slides" structure for the player
+        slides: nodes.map(n => ({
+            id: n.id,
+            type: n.type,
+            data: {
+                ...n.data,
+                // Map choices to find target connections
+                choices: n.data.choices?.map((c, idx) => {
+                    const edge = edges.find(e => e.source === n.id && e.sourceHandle === `handle-${idx}`);
+                    return { content: c.content, connection: edge?.target || null };
+                }) || []
+            }
+        }))
+    };
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    alert("Project Saved!");
+  };
+
+  const handlePlay = () => {
+    handleSave(); // Auto-save before play
+    const saved = localStorage.getItem(STORAGE_KEY);
+    // Push specific structure for player
+    if(saved) {
+        sessionStorage.setItem(PLAYER_STORAGE_KEY, saved);
+        router.push("/player");
     }
+  };
 
+  // --- Context Menus ---
 
-    return (
-        <div style={{ width: "100vw", height: "100vh" }}>
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={nodeTypes}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onInit={setReactFlowInstance}
-                onPaneContextMenu={(e) => handleContextMenu(<PaneContextMenu addNode={addNode} />, e)}
-                onNodeContextMenu={(e, node) => handleContextMenu(<NodeContextMenu node={node} deleteNode={deleteNode} />, e)}
-                onEdgeContextMenu={(e, edge) => handleContextMenu(<EdgeContextMenu edge={edge} deleteEdge={deleteEdge} />, e)}
-                autoPanOnNodeFocus={true}
-                zoomOnDoubleClick={false}
-                onFocus={() => setIsMenuOpen(false)}
-                isValidConnection={(connection) => 
-                {
-                    const existing = edges.find(
-                    (e) => e.source === connection.source && e.sourceHandle === connection.sourceHandle
-                    );
-                    return !existing;
-                }}
-                fitView
-            >
-                <Toolbar isPreviewVisible={isPreviewVisible} setIsPreviewVisible={setIsPreviewVisible} onSave={onSave} onRestore={onRestore} playStory={playStory}/>
-                {isPreviewVisible && <Preview/>}
-                <Background variant={BackgroundVariant.Lines} bgColor="#222B3Cff" color="#273041" />
-            </ReactFlow>
-            {isMenuOpen && <ContextMenu x={menuPos.x} y={menuPos.y} menuContent={menuContent}/>}
-        </div>
-    );
+  const handlePaneContextMenu = useCallback((event) => {
+    event.preventDefault();
+    setMenuState({ isOpen: true, x: event.clientX, y: event.clientY, type: 'pane' });
+  }, []);
+
+  const handleEdgeContextMenu = useCallback((event, edge) => {
+    event.preventDefault();
+    setMenuState({ isOpen: true, x: event.clientX, y: event.clientY, type: 'edge', edge });
+  }, []);
+
+  const addNode = (type) => {
+    const id = crypto.randomUUID();
+    const newNode = {
+      id,
+      type,
+      position: { x: (menuState.x - 50), y: (menuState.y - 50) }, // Offset for cursor
+      data: { text: "", choices: [] },
+    };
+    setNodes((nds) => nds.concat(newNode));
+  };
+
+  const deleteEdge = (id) => {
+    setEdges((eds) => eds.filter(e => e.id !== id));
+  };
+
+  const closeMenu = () => setMenuState(prev => ({ ...prev, isOpen: false }));
+
+  return (
+    <div className="w-screen h-screen bg-[#1a1a1a] text-white font-outfit">
+      <Toolbar 
+        onSave={handleSave} 
+        onPlay={handlePlay} 
+        onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)} 
+      />
+      
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onPaneContextMenu={handlePaneContextMenu}
+        onEdgeContextMenu={handleEdgeContextMenu}
+        onMoveStart={closeMenu}
+        fitView
+      >
+        <Background variant={BackgroundVariant.Dots} color="#333" gap={20} />
+      </ReactFlow>
+
+      {menuState.isOpen && (
+        <ContextMenu x={menuState.x} y={menuState.y}>
+            {menuState.type === 'pane' ? (
+                <PaneContextMenu onAddNode={addNode} onClose={closeMenu} />
+            ) : (
+                <EdgeContextMenu edge={menuState.edge} onDeleteEdge={deleteEdge} onClose={closeMenu} />
+            )}
+        </ContextMenu>
+      )}
+
+      {isSettingsOpen && (
+        <Settings
+          setIsPreviewVisible={setIsSettingsOpen}
+          name={meta.name} setName={(n) => setMeta(m => ({...m, name: n}))}
+          description={meta.description} setDescription={(d) => setMeta(m => ({...m, description: d}))}
+          appearance={meta.appearance} setAppearance={(a) => setMeta(m => ({...m, appearance: a}))}
+          timing={meta.timing} setTiming={(t) => setMeta(m => ({...m, timing: t}))}
+        />
+      )}
+    </div>
+  );
 }
 
-
-
-function Toolbar({ isPreviewVisible, setIsPreviewVisible, onSave, onRestore, playStory }) 
-{
-    return (
-        <div className="absolute top-0 left-0 m-4 p-3 rounded-lg flex flex-col gap-8 bg-shadow-grey z-50">
-            <FontAwesomeIcon icon={faFloppyDisk} onClick={onSave} className="cursor-pointer text-2xl text-gray-300 hover:text-tiger-orange z-50" />
-            <FontAwesomeIcon icon={faRotate} onClick={onRestore} className="cursor-pointer text-2xl text-gray-300 hover:text-tiger-orange z-50" />
-            <FontAwesomeIcon icon={isPreviewVisible ? faEyeSlash : faEye} onClick={() => setIsPreviewVisible(p => !p)} className="cursor-pointer text-2xl text-gray-300 hover:text-tiger-orange z-50" />
-            <FontAwesomeIcon icon={faPlayCircle} onClick={playStory} className="cursor-pointer text-2xl text-gray-300 hover:text-tiger-orange z-50" />
-        </div>
-    );
-}
-
-function Preview()
-{
-    return (
-        <div className="absolute top-0 right-0 p-3 rounded-lg flex flex-col w-82 h-full gap-8 bg-shadow-grey z-50">
-        </div>
-    );
-}
-
-function ContextMenu({ x, y, menuContent }) 
-{
-    return (
-        <div className="min-w-42 w-max h-max p-2 absolute bg-shadow-grey/80 backdrop-blur-sm rounded-lg shadow-lg" style={{ top: y, left: x }}>
-            {menuContent}
-        </div>
-    );
-}
-
-function PaneContextMenu({ addNode }) 
-{
-    const options = 
-    [
-        {
-            label: "Add Normal Node",
-            icon: faFileAlt,
-            onClick: () => addNode("normal", { x: 0, y: 0 })
-        },
-        {
-            label: "Add Image Node",
-            icon: faFile,
-            onClick: () => addNode("image", { x: 0, y: 0 })
-        },
-        {
-            label: "Add Video Node",
-            icon: faVideo,
-            onClick: () => addNode("video", { x: 0, y: 0 })
-        }
-    ];
-
-    return Options(options);
-}
-
-function NodeContextMenu({ node, deleteNode }) 
-{
-    const options = [{ label: "Delete Node", icon: faTrash, onClick: () => deleteNode(node.id) }];
-    return Options(options);
-}
-
-function EdgeContextMenu({ edge, deleteEdge }) 
-{
-    const options = [{ label: "Delete Edge", icon: faTrash, onClick: () => deleteEdge(edge.id) }];
-    return Options(options);
-}
-
-function Options(options) 
-{
-    return options.map((o, i) => (
-        <div key={i} className="w-full hover:cursor-pointer flex items-center hover:bg-deep-space-blue/50 p-2 rounded" onClick={() => o.onClick()}>
-            <FontAwesomeIcon icon={o.icon} className="text-gray-300 mr-2" />
-            <h2 className="text-gray-300 font-extralight font-outfit">{o.label}</h2>
-        </div>
-    ));
+function Toolbar({ onSave, onPlay, onToggleSettings }) {
+  const btnClass = "p-2 rounded-lg bg-shadow-grey hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5";
+  return (
+    <div className="absolute top-4 left-4 z-40 flex gap-2">
+      <button onClick={onSave} className={btnClass} title="Save Project">
+        <FontAwesomeIcon icon={faFloppyDisk} className="w-5 h-5" />
+      </button>
+      <button onClick={onPlay} className={btnClass} title="Play Preview">
+        <FontAwesomeIcon icon={faPlay} className="w-5 h-5" />
+      </button>
+      <div className="w-px h-8 bg-white/10 mx-1 self-center" />
+      <button onClick={onToggleSettings} className={btnClass} title="Project Settings">
+        <FontAwesomeIcon icon={faCog} className="w-5 h-5" />
+      </button>
+    </div>
+  );
 }
