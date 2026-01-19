@@ -1,44 +1,49 @@
 @import "tailwindcss";
 
-:root 
-{
-  --shadow-grey: #1A202Cff;
-  --deep-space-blue: #222B3Cff;
-  --shadow-grey-2: #1A202Cff;
-  --tiger-orange: #ED8836ff;
-  --charcoal-blue: #2C3848ff;
+:root {
+    --shadow-grey: #1a202cff;
+    --deep-space-blue: #222b3cff;
+    --shadow-grey-2: #1a202cff;
+    --tiger-orange: #ed8836ff;
+    --charcoal-blue: #2c3848ff;
 
-  --bg-base: #F7F9FC;
-  --bg-elevated: #FFFFFF;
-  --border-subtle: #D0D5DD;
-  --accent-primary: #ED8836;
-  --text-muted: #667085;
+    --bg-base: #f7f9fc;
+    --bg-elevated: #ffffff;
+    --border-subtle: #d0d5dd;
+    --accent-primary: #ed8836;
+    --text-muted: #667085;
 }
 
-@theme inline 
-{
-  --color-shadow-grey: var(--shadow-grey);
-  --color-deep-space-blue: var(--deep-space-blue);
-  --color-shadow-grey-2: var(--shadow-grey-2);
-  --color-tiger-orange: var(--tiger-orange);
-  --color-charcoal-blue: var(--charcoal-blue);
+@theme inline {
+    --color-shadow-grey: var(--shadow-grey);
+    --color-deep-space-blue: var(--deep-space-blue);
+    --color-shadow-grey-2: var(--shadow-grey-2);
+    --color-tiger-orange: var(--tiger-orange);
+    --color-charcoal-blue: var(--charcoal-blue);
 
-  --font-outfit: var(--font-outfit);
+    --font-outfit: var(--font-outfit);
 }
 
-@media (prefers-color-scheme: dark) 
-{
-  :root 
-  {
-    --shadow-grey: #1A202Cff;
-    --deep-space-blue: #222B3Cff;
-    --shadow-grey-2: #1A202Cff;
-    --tiger-orange: #ED8836ff;
-    --charcoal-blue: #2C3848ff;
-  }
+@media (prefers-color-scheme: dark) {
+    :root {
+        --shadow-grey: #1a202cff;
+        --deep-space-blue: #222b3cff;
+        --shadow-grey-2: #1a202cff;
+        --tiger-orange: #ed8836ff;
+        --charcoal-blue: #2c3848ff;
+    }
 }
 
 /* Apply Outfit font globally */
-html, body {
-  font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+html,
+body {
+    font-family:
+        "Outfit",
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        "Segoe UI",
+        Roboto,
+        "Helvetica Neue",
+        Arial;
 }

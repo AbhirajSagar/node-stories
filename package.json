@@ -1,34 +1,38 @@
 {
-  "name": "azuned",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@fortawesome/free-brands-svg-icons": "^7.1.0",
-    "@fortawesome/free-regular-svg-icons": "^7.1.0",
-    "@fortawesome/free-solid-svg-icons": "^7.1.0",
-    "@fortawesome/react-fontawesome": "^3.1.0",
-    "@xyflow/react": "^12.9.3",
-    "bcrypt": "^6.0.0",
-    "cookie": "^1.1.1",
-    "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.0.2",
-    "next": "^16.1.1",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.3",
-    "prettier": "^3.6.2",
-    "prettier-plugin-curly": "^0.4.0",
-    "tailwindcss": "^4"
-  }
+    "name": "azuned",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "eslint",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
+    },
+    "dependencies": {
+        "@fortawesome/free-brands-svg-icons": "^7.1.0",
+        "@fortawesome/free-regular-svg-icons": "^7.1.0",
+        "@fortawesome/free-solid-svg-icons": "^7.1.0",
+        "@fortawesome/react-fontawesome": "^3.1.0",
+        "@xyflow/react": "^12.9.3",
+        "bcrypt": "^6.0.0",
+        "cookie": "^1.1.1",
+        "jsonwebtoken": "^9.0.3",
+        "mongoose": "^9.0.2",
+        "next": "^16.1.1",
+        "react": "^19.2.3",
+        "react-dom": "^19.2.3"
+    },
+    "devDependencies": {
+        "@tailwindcss/postcss": "^4",
+        "babel-plugin-react-compiler": "1.0.0",
+        "eslint": "^9",
+        "eslint-config-next": "16.0.3",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.5",
+        "prettier": "^3.8.0",
+        "prettier-plugin-curly": "^0.4.0",
+        "tailwindcss": "^4"
+    }
 }
