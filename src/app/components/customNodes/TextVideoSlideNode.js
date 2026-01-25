@@ -11,7 +11,7 @@ import { faCloudUploadAlt, faVideo } from "@fortawesome/free-solid-svg-icons";
 import {
     saveMediaToIndexedDB,
     getMediaFromIndexedDB,
-} from "@/app/utils/indexDb";
+} from "@/utils/indexDb";
 import Toolbar from "../NodeToolbar";
 import Choices from "../Choices";
 

@@ -1,4 +1,5 @@
-export async function saveMediaToIndexedDB(key, file) {
+export async function saveMediaToIndexedDB(key, file) 
+{
     const db = await openDB();
     const tx = db.transaction("media", "readwrite");
     const store = tx.objectStore("media");
@@ -15,7 +16,8 @@ export async function saveMediaToIndexedDB(key, file) {
     });
 }
 
-export async function getMediaFromIndexedDB(key) {
+export async function getMediaFromIndexedDB(key) 
+{
     const db = await openDB();
     const tx = db.transaction("media", "readonly");
     const store = tx.objectStore("media");
@@ -32,7 +34,8 @@ export async function getMediaFromIndexedDB(key) {
     });
 }
 
-function openDB() {
+function openDB() 
+{
     return new Promise((resolve, reject) => {
         const request = indexedDB.open("StoryMediaDB", 1);
 

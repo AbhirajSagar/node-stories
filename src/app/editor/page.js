@@ -5,7 +5,7 @@ import { ReactFlow,  Background, BackgroundVariant, ReactFlowProvider, } from "@
 import { applyNodeChanges, applyEdgeChanges, addEdge, useReactFlow } from "@xyflow/react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFloppyDisk, faPlay, faCog } from "@fortawesome/free-solid-svg-icons";
+import { faFloppyDisk, faPlay, faCog, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 
 // Components
@@ -14,7 +14,7 @@ import TextImageSlideNode from "@/app/components/customNodes/TextImageSlideNode"
 import TextVideoSlideNode from "@/app/components/customNodes/TextVideoSlideNode";
 import { PaneContextMenu, EdgeContextMenu, ContextMenu } from "@/app/components/EditorMenu";
 import { Settings } from "@/app/components/StorySettings";
-import extractFlowData from "@/app/utils/flowExtractor";
+import extractFlowData from "@/utils/flowExtractor";
 
 import "@xyflow/react/dist/style.css";
 
@@ -271,10 +271,19 @@ function EditorArea()
 function Toolbar({ onSave, onPlay, onToggleSettings }) 
 {
   const btnClass = "p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer w-22 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5";
+  const [isSaving, setIsSaving] = useState(false);
+
+  function saveFlow()
+  {
+    setIsSaving(true);
+    setTimeout(() => setIsSaving(false),1000);
+    onSave();
+  }
+
   return (
     <div className="absolute top-4 left-4 z-40 flex gap-2">
-      <button onClick={onSave} className={btnClass} title="Save Project">
-        <FontAwesomeIcon icon={faFloppyDisk} className="w-5 h-5" />
+      <button onClick={saveFlow} className={btnClass} title="Save Project">
+        <FontAwesomeIcon icon={isSaving ? faCheckCircle : faFloppyDisk } className="w-5 h-5" />
         <p className="text-sm">Save</p>
       </button>
       <button onClick={onPlay} className={btnClass} title="Play Preview">

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import CustomFetch from "../utils/apiHelper";
+import CustomFetch from "@/utils/CustomFetch";
 import { useRouter } from "next/navigation";
 
-export default function AuthPage() {
+export default function AuthPage() 
+{
     const [mode, setMode] = useState("signin");
     const [name, setName] = useState();
     const [email, setEmail] = useState();

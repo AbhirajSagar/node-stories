@@ -1,9 +1,8 @@
 import { Handle, Position } from "@xyflow/react";
 import React from "react";
 
-function Choices({ choices = [], onChoiceChange }) {
-    // choices is an array of objects: { content: string, connection: string | null }
-
+function Choices({ choices = [], onChoiceChange }) 
+{
     return (
         <div className="flex flex-col gap-2 mt-2">
             {choices.map((choice, idx) => (

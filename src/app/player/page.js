@@ -1,140 +1,148 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import extractFlowData from "@/app/utils/flowExtractor";
-import { getMediaFromIndexedDB } from "@/app/utils/indexDb";
+import extractFlowData from "@/utils/flowExtractor";
+import { getMediaFromIndexedDB } from "@/utils/indexDb";
 
 const PLAYER_STORAGE_KEY = "player_story_data";
 
-export default function PlayerPage() {
+export default function PlayerPage()
+{
     const router = useRouter();
     const [gameData, setGameData] = useState(null);
     const [currentSlide, setCurrentSlide] = useState(null);
 
-    useEffect(() => {
+    useEffect(() => 
+    {
         const raw = sessionStorage.getItem(PLAYER_STORAGE_KEY);
-        if (!raw) {
-            router.push("/editor"); // Redirect if no data
+        if (!raw) 
+        {
+            router.push("/editor"); 
             return;
         }
+
         const json = JSON.parse(raw);
         const data = extractFlowData(json, 0.1);
         setGameData(data);
 
-        // Find Start Node (First slide in array or logic to find root)
-        if (data.slides.length > 0) {
-            // Optimization: Create a map for faster lookup
+        if (data.slides.length > 0) 
+        {
             setCurrentSlide(data.slides[0]);
         }
     }, [router]);
 
-    const handleChoice = (targetId) => {
-        if (!targetId) return; // End of path
+    function handleChoice(targetId)
+    {
+        if (!targetId) return;
         const next = gameData.slides.find((s) => s.id === targetId);
         if (next) setCurrentSlide(next);
-    };
+    }
 
     if (!currentSlide || !gameData)
-        return (
-            <div className="bg-black h-screen w-screen text-white flex items-center justify-center">
-                Loading...
-            </div>
-        );
+    {
+        return <div className="bg-black h-screen w-screen text-white flex items-center justify-center">Loading...</div>;
+    }
 
     return (
         <div className="w-screen h-screen overflow-hidden bg-black relative">
-            <SlideRenderer
-                slide={currentSlide}
-                appearance={gameData.appearance}
-                timing={gameData.timing}
-                onNavigate={handleChoice}
+            <SlideRouter 
+                slide={currentSlide} 
+                appearance={gameData.appearance} 
+                timing={gameData.timing} 
+                onNavigate={handleChoice} 
             />
         </div>
     );
 }
 
-function SlideRenderer({ slide, appearance, timing, onNavigate }) {
-    const [mediaUrl, setMediaUrl] = useState(null);
+// Routes traffic to the correct layout component based on slide type
+function SlideRouter({ slide, appearance, timing, onNavigate })
+{
+    if (slide.type === "normal")
+    {
+        return <TextSlideView slide={slide} appearance={appearance} timing={timing} onNavigate={onNavigate} />;
+    }
+    
+    // Both Image and Video share the "Bottom Center" layout logic
+    return <MediaSlideView slide={slide} appearance={appearance} timing={timing} onNavigate={onNavigate} />;
+}
 
-    // Background Styles
+// Layout: Center Horizontal / Center Vertical
+function TextSlideView({ slide, appearance, timing, onNavigate })
+{
     const bgStyle = {
-        background: `linear-gradient(135deg, ${appearance.bg_from || "#0f172a"}, ${appearance.bg_to || "#020617"})`,
+        background: `linear-gradient(135deg, ${appearance.bg_from || "#0f172a"}, ${appearance.bg_to || "#020617"})`
     };
 
-    // Load Media
-    useEffect(() => {
-        let active = true;
-        setMediaUrl(null); // Reset prev media immediately
-
-        if (
-            (slide.type === "image" || slide.type === "video") &&
-            slide.data.key
-        ) {
-            getMediaFromIndexedDB(slide.data.key).then((blob) => {
-                if (active && blob) setMediaUrl(URL.createObjectURL(blob));
-            });
-        }
-        return () => {
-            active = false;
-            if (mediaUrl) URL.revokeObjectURL(mediaUrl);
-        };
-    }, [slide.id, slide.type, slide.data.key]);
-
     return (
-        <div
-            className="w-full h-full flex flex-col items-center justify-center relative"
-            style={bgStyle}
-        >
-            {/* Media Layer */}
-            {slide.type !== "normal" && (
-                <div className="absolute inset-0 z-0">
-                    {slide.type === "image" && mediaUrl && (
-                        <img
-                            src={mediaUrl}
-                            className="w-full h-full object-cover opacity-60"
-                            alt=""
-                        />
-                    )}
-                    {slide.type === "video" && mediaUrl && (
-                        <video
-                            src={mediaUrl}
-                            className="w-full h-full object-cover opacity-60"
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                        />
-                    )}
-                    {/* Overlay gradient to make text readable */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        <div className="w-full h-full flex flex-col items-center justify-center p-6" style={bgStyle}>
+            <div className="max-w-4xl w-full flex flex-col items-center text-center">
+                <div className="mb-10 p-8 rounded-xl backdrop-blur-md bg-white/5 border border-white/10 shadow-2xl">
+                    <SlideText text={slide.data.text} />
                 </div>
-            )}
-
-            {/* Content Layer */}
-            <div className="z-10 relative w-full max-w-4xl px-6 flex flex-col items-center text-center pb-20">
-                {/* Main Text */}
-                <div className="mb-8 p-6 rounded-xl backdrop-blur-sm bg-black/20 border border-white/5 shadow-2xl">
-                    <p className="text-xl md:text-3xl font-light leading-relaxed text-white drop-shadow-md">
-                        {slide.data.text || "..."}
-                    </p>
-                </div>
-
-                {/* Choices */}
-                <ChoiceGroup
-                    choices={slide.data.choices}
-                    onNavigate={onNavigate}
-                    appearance={appearance}
-                    delay={timing.delay}
+                
+                <ChoiceGroup 
+                    choices={slide.data.choices} 
+                    onNavigate={onNavigate} 
+                    appearance={appearance} 
+                    delay={timing.delay} 
                 />
             </div>
         </div>
     );
 }
 
-function ChoiceGroup({ choices, onNavigate, appearance, delay }) {
+// Layout: Fullscreen Background / Content at Bottom Center
+function MediaSlideView({ slide, appearance, timing, onNavigate })
+{
+    const mediaUrl = useMediaUrl(slide);
+
+    return (
+        <div className="w-full h-full relative bg-black">
+            {/* Background Layer */}
+            <div className="absolute inset-0 z-0">
+                {slide.type === "image" && mediaUrl && (
+                    <img src={mediaUrl} className="w-full h-full object-cover" alt="Story Slide" />
+                )}
+                {slide.type === "video" && mediaUrl && (
+                    <video src={mediaUrl} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+                )}
+            </div>
+
+            {/* Content Layer - Pushed to bottom */}
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-end pb-16 px-6 text-center">
+                <div className="max-w-4xl w-full flex flex-col items-center">
+                    <div className="mb-8 drop-shadow-lg backdrop-blur-2xl bg-black/10 px-3 rounded outline-1 outline-white">
+                        <SlideText text={slide.data.text} />
+                    </div>
+
+                    <ChoiceGroup 
+                        choices={slide.data.choices} 
+                        onNavigate={onNavigate} 
+                        appearance={appearance} 
+                        delay={timing.delay} 
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SlideText({ text })
+{
+    return (
+        <p className="text-xl md:text-3xl font-bold leading-relaxed text-white">
+            {text || "..."}
+        </p>
+    );
+}
+
+function ChoiceGroup({ choices, onNavigate, appearance, delay })
+{
     const [visible, setVisible] = useState(false);
 
-    useEffect(() => {
+    useEffect(() => 
+    {
         setVisible(false);
         const timer = setTimeout(() => setVisible(true), (delay || 0) * 1000);
         return () => clearTimeout(timer);
@@ -144,42 +152,67 @@ function ChoiceGroup({ choices, onNavigate, appearance, delay }) {
 
     const btnStyle = (isHover) => ({
         background: `linear-gradient(90deg, 
-        ${isHover ? appearance.hovered_option_from || "#ED8836" : appearance.option_from || "#ffffff"}, 
-        ${isHover ? appearance.hovered_option_to || "#FB923C" : appearance.option_to || "#e2e2e2"}
-    )`,
-        color: isHover ? "#fff" : "#000",
+            ${isHover ? appearance.hovered_option_from || "#ED8836" : appearance.option_from || "#ffffff"}, 
+            ${isHover ? appearance.hovered_option_to || "#FB923C" : appearance.option_to || "#e2e2e2"}
+        )`,
+        color: isHover ? "#fff" : "#000"
     });
 
     return (
-        <div
-            className={`flex flex-wrap justify-center gap-4 transition-opacity duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
-        >
-            {choices.map(
-                (c, i) =>
-                    c.content && (
-                        <ChoiceButton
-                            key={i}
-                            text={c.content}
-                            onClick={() => onNavigate(c.connection)}
-                            getStyle={btnStyle}
-                        />
-                    )
-            )}
+        <div className={`flex flex-wrap justify-center gap-4 transition-opacity duration-700 ${visible ? "opacity-100" : "opacity-0"}`}>
+            {choices.map((c, i) => c.content && (
+                <ChoiceButton 
+                    key={i} 
+                    text={c.content} 
+                    onClick={() => onNavigate(c.connection)} 
+                    getStyle={btnStyle} 
+                />
+            ))}
         </div>
     );
 }
 
-function ChoiceButton({ text, onClick, getStyle }) {
+function ChoiceButton({ text, onClick, getStyle })
+{
     const [hover, setHover] = useState(false);
+
     return (
-        <button
+        <button 
             onClick={onClick}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={getStyle(hover)}
-            className="px-6 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
+            className="px-6 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 hover:scale-105 active:scale-95"
         >
             {text}
         </button>
     );
+}
+
+// Custom Hook to abstract IndexedDB Blob loading
+function useMediaUrl(slide)
+{
+    const [mediaUrl, setMediaUrl] = useState(null);
+
+    useEffect(() => 
+    {
+        let active = true;
+        setMediaUrl(null);
+
+        if (slide.data.key) 
+        {
+            getMediaFromIndexedDB(slide.data.key).then((blob) => 
+            {
+                if (active && blob) setMediaUrl(URL.createObjectURL(blob));
+            });
+        }
+
+        return () => 
+        {
+            active = false;
+            if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+        };
+    }, [slide.id, slide.type, slide.data.key]);
+
+    return mediaUrl;
 }
