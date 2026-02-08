@@ -1,6 +1,8 @@
-export default function extractFlowData(flowData, version) {
+export default function extractFlowData(flowData, version) 
+{
     // Default structure to ensure no undefined errors
-    const defaultData = {
+    const defaultData = 
+    {
         slides: [],
         appearance: {},
         name: "",
@@ -10,8 +12,9 @@ export default function extractFlowData(flowData, version) {
 
     if (!flowData) return defaultData;
 
-    // Handle versioning if schema changes in the future
-    if (version === 0.1 || !version) {
+    
+    if (version === 0.1 || !version) 
+    {
         return {
             slides: flowData.slides || [],
             appearance: flowData.appearance || {},

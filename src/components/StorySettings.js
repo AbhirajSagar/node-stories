@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faGear,
-    faPaintBrush,
-    faSlidersH,
-    faTimes,
-} from "@fortawesome/free-solid-svg-icons";
+import { faGear, faPaintBrush, faSlidersH, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { GeneralTabContent } from "./settingsTabContent/GeneralTabContent";
 import { AppearanceTabContent } from "./settingsTabContent/AppearanceTabContent";
 import { AdvancedTabContent } from "./settingsTabContent/AdvancedTabContent";

@@ -1,8 +1,7 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import extractFlowData from "@/utils/flowExtractor";
-import { getMediaFromIndexedDB } from "@/utils/indexDb";
 
 const PLAYER_STORAGE_KEY = "player_story_data";
 
@@ -95,7 +94,7 @@ function TextSlideView({ slide, appearance, timing, onNavigate })
 // Layout: Fullscreen Background / Content at Bottom Center
 function MediaSlideView({ slide, appearance, timing, onNavigate })
 {
-    const mediaUrl = useMediaUrl(slide);
+    const mediaUrl = slide.data.key;
 
     return (
         <div className="w-full h-full relative bg-black">
@@ -187,32 +186,4 @@ function ChoiceButton({ text, onClick, getStyle })
             {text}
         </button>
     );
-}
-
-// Custom Hook to abstract IndexedDB Blob loading
-function useMediaUrl(slide)
-{
-    const [mediaUrl, setMediaUrl] = useState(null);
-
-    useEffect(() => 
-    {
-        let active = true;
-        setMediaUrl(null);
-
-        if (slide.data.key) 
-        {
-            getMediaFromIndexedDB(slide.data.key).then((blob) => 
-            {
-                if (active && blob) setMediaUrl(URL.createObjectURL(blob));
-            });
-        }
-
-        return () => 
-        {
-            active = false;
-            if (mediaUrl) URL.revokeObjectURL(mediaUrl);
-        };
-    }, [slide.id, slide.type, slide.data.key]);
-
-    return mediaUrl;
 }

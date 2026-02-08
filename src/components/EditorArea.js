@@ -1,40 +1,35 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { ReactFlow,  Background, BackgroundVariant, ReactFlowProvider, } from "@xyflow/react";
+import { ReactFlow,  Background, BackgroundVariant,} from "@xyflow/react";
 import { applyNodeChanges, applyEdgeChanges, addEdge, useReactFlow } from "@xyflow/react";
-
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFloppyDisk, faPlay, faCog, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 
 // Components
-import NormalSlideNode from "@/app/components/customNodes/NormalSlideNode";
-import TextImageSlideNode from "@/app/components/customNodes/TextImageSlideNode";
-import TextVideoSlideNode from "@/app/components/customNodes/TextVideoSlideNode";
-import { PaneContextMenu, EdgeContextMenu, ContextMenu } from "@/app/components/EditorMenu";
-import { Settings } from "@/app/components/StorySettings";
+import NormalSlideNode from "@/components/customNodes/NormalSlideNode";
+import TextImageSlideNode from "@/components/customNodes/TextImageSlideNode";
+import TextVideoSlideNode from "@/components/customNodes/TextVideoSlideNode";
+import { PaneContextMenu, EdgeContextMenu, ContextMenu } from "@/components/EditorMenu";
+import EditorToolbar from "@/components/EditorToolbar";
+import { Settings } from "@/components/StorySettings";
 import extractFlowData from "@/utils/flowExtractor";
+
 
 import "@xyflow/react/dist/style.css";
 
-
-const nodeTypes = { normal: NormalSlideNode, image: TextImageSlideNode, video: TextVideoSlideNode};
+const nodeTypes = 
+{ 
+    normal: NormalSlideNode, 
+    image: TextImageSlideNode, 
+    video: TextVideoSlideNode
+};
 
 const STORAGE_KEY = "wip_story_flow";
 const PLAYER_STORAGE_KEY = "player_story_data";
 
-export default function Page() 
+export default function EditorArea({storyId}) 
 {
-    return (
-        <ReactFlowProvider>
-            <EditorArea />
-        </ReactFlowProvider>
-    );
-}
-
-function EditorArea() 
-{
+    useEffect(() => {console.log(storyId)},[]);
     const [nodes, setNodes] = useState([]);
     const [edges, setEdges] = useState([]);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -50,6 +45,7 @@ function EditorArea()
     ({
         name: "",
         description: "",
+        thumbnailUrl: "",
         appearance: {},
         timing: { delay: 0 },
     });
@@ -209,7 +205,7 @@ function EditorArea()
 
     return (
         <div className="w-screen h-screen bg-[#11141C] text-white font-outfit">
-            <Toolbar
+            <EditorToolbar
                 onSave={saveFlow}
                 onPlay={handlePlay}
                 onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -262,39 +258,10 @@ function EditorArea()
                     }
                     timing={meta.timing}
                     setTiming={(t) => setMeta((m) => ({ ...m, timing: t }))}
+                    thumbnailUrl={meta.thumbnailUrl}
+                    setThumbnail={(url) => setMeta((m) => ({...m, thumbnailUrl: url}))}
                 />
             )}
         </div>
     );
-}
-
-function Toolbar({ onSave, onPlay, onToggleSettings }) 
-{
-  const btnClass = "p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer w-22 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5";
-  const [isSaving, setIsSaving] = useState(false);
-
-  function saveFlow()
-  {
-    setIsSaving(true);
-    setTimeout(() => setIsSaving(false),1000);
-    onSave();
-  }
-
-  return (
-    <div className="absolute top-4 left-4 z-40 flex gap-2">
-      <button onClick={saveFlow} className={btnClass} title="Save Project">
-        <FontAwesomeIcon icon={isSaving ? faCheckCircle : faFloppyDisk } className="w-5 h-5" />
-        <p className="text-sm">Save</p>
-      </button>
-      <button onClick={onPlay} className={btnClass} title="Play Preview">
-        <FontAwesomeIcon icon={faPlay} className="w-5 h-5" />
-        <p className="text-sm">Play</p>
-      </button>
-      <div className="w-px h-8 bg-white/10 mx-1 self-center" />
-      <button onClick={onToggleSettings} className={btnClass} title="Project Settings">
-        <FontAwesomeIcon icon={faCog} className="w-5 h-5" />
-        <p className="text-sm">Settings</p>
-      </button>
-    </div>
-  );
 }

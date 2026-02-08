@@ -6,6 +6,7 @@
     --shadow-grey-2: #1a202cff;
     --tiger-orange: #ed8836ff;
     --charcoal-blue: #2c3848ff;
+    --dark-blue-black: #11141C;
 
     --bg-base: #f7f9fc;
     --bg-elevated: #ffffff;
@@ -20,6 +21,7 @@
     --color-shadow-grey-2: var(--shadow-grey-2);
     --color-tiger-orange: var(--tiger-orange);
     --color-charcoal-blue: var(--charcoal-blue);
+    --color-dark-blue-black: var(--dark-blue-black);
 
     --font-outfit: var(--font-outfit);
 }

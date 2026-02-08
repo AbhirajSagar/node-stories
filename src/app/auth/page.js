@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import CustomFetch from "@/utils/CustomFetch";
 import { useRouter } from "next/navigation";
 
 export default function AuthPage() 
@@ -17,16 +16,19 @@ export default function AuthPage()
     const [error, setError] = useState(null);
     const router = useRouter();
 
-    function resetMessages() {
+    function resetMessages() 
+    {
         setMessage(null);
         setError(null);
     }
 
-    function isValidEmail(value) {
+    function isValidEmail(value) 
+    {
         return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
     }
 
-    function validateForm() {
+    function validateForm() 
+    {
         resetMessages();
 
         if (mode === "signup") {
@@ -74,36 +76,70 @@ export default function AuthPage()
         }
     }
 
-    async function signIn() {
-        const res = await CustomFetch("/api/auth/signin", "POST", {
-            email,
-            password,
-        });
-        console.log(res);
+    async function signIn() 
+    {
+        const requestOptions = 
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({email,password}),
+        };
+        
+        try
+        {
+            const res = await fetch("/api/auth/login", requestOptions);
+            const data = await res.json();
+            console.log(data);
 
-        if (res.status !== 201 && res.status !== 200)
-            setError(res.data.message);
+            if (res.status !== 201 && res.status !== 200)
+            {
+                setError(data.message);
+                setLoading(false);
+                return;
+            }
 
-        setMessage(res.data.message);
-        setLoading(false);
-        router.push("/");
+            setMessage(data.message);
+            setLoading(false);
+            router.push("/");
+        }
+        catch (error)
+        {
+            setError("An unexpected error occurred. Please try again.");
+            console.log(error);
+            setLoading(false);
+        }
     }
 
-    async function signUp() {
-        const res = await CustomFetch("/api/auth/signup", "POST", {
-            name,
-            email,
-            password,
-            dob,
-        });
-        console.log(res);
+    async function signUp() 
+    {
+        const modifiedDob = dob.replaceAll('-','');
 
-        if (res.status !== 201 && res.status !== 200)
-            setError(res.data.message);
+        const requestOptions = 
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({name, email, password, dob: modifiedDob})
+        };
 
-        setMessage(res.data.message);
-        setMode("signin");
-        setLoading(false);
+        try
+        {
+            const res = await fetch("/api/auth/signup", requestOptions);
+            const data = await res.json();
+            console.log(data);
+
+            if (res.status !== 201 && res.status !== 200)
+                setError(data.error);
+
+            setMessage(data.message);
+            setMode("signin");
+            setLoading(false);
+        }
+        catch(err)
+        {
+            console.log(err);
+            setError("An unexpected error occurred. Please try again.");
+            setLoading(false);
+        }
     }
 
     function handleModeChange(newMode) {

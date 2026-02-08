@@ -2,12 +2,8 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronCircleDown } from "@fortawesome/free-solid-svg-icons";
 
-export default function Accordion({
-    title,
-    children,
-    defaultOpen = false,
-    className = "",
-}) {
+export default function Accordion({title,children,defaultOpen = false,className = ""})
+{
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (

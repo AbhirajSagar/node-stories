@@ -1,11 +1,7 @@
 import Accordion from "../Accordion";
 
-export function GeneralTabContent({
-    name,
-    description,
-    setName,
-    setDescription,
-}) {
+export function GeneralTabContent({name, description, setName, setDescription})
+{
     return (
         <div className="text-white/80 space-y-4">
             <Accordion title="Story Metadata" defaultOpen={true}>
@@ -22,6 +18,7 @@ export function GeneralTabContent({
                             placeholder="My Awesome Story"
                         />
                     </div>
+
                     <div>
                         <label className="text-xs text-white/50 block mb-1">
                             Description
