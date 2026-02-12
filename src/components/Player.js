@@ -3,31 +3,26 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import extractFlowData from "@/utils/flowExtractor";
 
-const PLAYER_STORAGE_KEY = "player_story_data";
-
-export default function PlayerPage()
+export default function PlayerPage({storyJson})
 {
     const router = useRouter();
     const [gameData, setGameData] = useState(null);
     const [currentSlide, setCurrentSlide] = useState(null);
 
-    useEffect(() => 
+    useEffect(() =>
     {
-        const raw = sessionStorage.getItem(PLAYER_STORAGE_KEY);
-        if (!raw) 
+        async function loadStory()
         {
-            router.push("/editor"); 
-            return;
+            const data = extractFlowData(storyJson, 0.1);
+            setGameData(data);
+
+            if (data.slides.length > 0) 
+            {
+                setCurrentSlide(data.slides[0]);
+            }
         }
 
-        const json = JSON.parse(raw);
-        const data = extractFlowData(json, 0.1);
-        setGameData(data);
-
-        if (data.slides.length > 0) 
-        {
-            setCurrentSlide(data.slides[0]);
-        }
+        loadStory();
     }, [router]);
 
     function handleChoice(targetId)

@@ -1,26 +1,15 @@
 import { useState } from "react";
-import { faFloppyDisk, faPlay, faUpload, faCog, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import { faFloppyDisk, faPlay, faUpload, faCog, faCheckCircle, faClock, faX } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function EditorToolbar({ onSave, onPlay, onToggleSettings }) 
 {
   const btnClass = "p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer w-22 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5";
-  const [isSaving, setIsSaving] = useState(false);
-
-  function saveFlow()
-  {
-    setIsSaving(true);
-    setTimeout(() => setIsSaving(false),1000);
-    onSave();
-  }
 
   return (
     <>
       <div className="absolute top-4 left-4 z-40 flex items-center gap-2">
-        <button onClick={saveFlow} className={btnClass} title="Save Project">
-          <FontAwesomeIcon icon={isSaving ? faCheckCircle : faFloppyDisk } className="w-5 h-5" />
-          <p className="text-sm">Save</p>
-        </button>
+        <SaveBtn  onSave={onSave} btnClass={btnClass} />
         <button onClick={onPlay} className={btnClass} title="Play Preview">
           <FontAwesomeIcon icon={faPlay} className="w-5 h-5" />
           <p className="text-sm">Play</p>
@@ -38,5 +27,41 @@ export default function EditorToolbar({ onSave, onPlay, onToggleSettings })
         </button>
       </div>
     </>
+  );
+}
+
+function SaveBtn({onSave, btnClass})
+{
+  const [state, setState] = useState('normal');
+
+  async function saveFlow()
+  {
+    setState('saving');
+    const saved = await onSave();
+    if(saved)
+    {
+      setState('success');
+    }
+    else
+    {
+      setState('failed');
+    }
+
+    setTimeout(() => setState('normal'), 2000);
+  }
+
+  function Icon(state)
+  {
+    if(state === 'normal') return faFloppyDisk
+    else if(state === 'saving') return faClock
+    else if(state === 'failed') return faX
+    else if(state === 'success') return faCheckCircle
+  }
+
+  return (
+    <button onClick={saveFlow} className={btnClass} title="Save Project">
+      <FontAwesomeIcon icon={Icon(state)} className="w-5 h-5" bounce={state === 'saving'}/>
+      <p className="text-sm">Save</p>
+    </button>
   );
 }

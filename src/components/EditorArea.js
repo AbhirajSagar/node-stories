@@ -71,47 +71,42 @@ export default function EditorArea({storyId})
         });
     }, []);
 
-    function tryLoadSavedFlow()
+    async function tryLoadSavedFlow()
     {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
-      try 
-      {
-        const json = JSON.parse(saved);
-        const { slides, ...rest } = extractFlowData(json, 0.1);
+        if(!storyId) return;
+        const req = await fetch(`/api/story/${storyId}`);
+        
+        const storyData = await req.json();
+        const data = storyData.data;
+        const flowData = data.flow;
+        const flow = flowData.flow;
 
-        // Restore Meta
+        const {slides, ...rest} = extractFlowData(flow, 0.1)
+
         setMeta(rest);
 
-        // Restore Nodes/Edges logic would go here.
-        // Note: The provided `extractFlowData` returns a simplified slide structure.
-        // For the EDITOR, we ideally save the raw ReactFlow object.
-        // For this refactor, I will assume we are restoring the ReactFlow object if available.
-        if (json.flow) 
+        if (flow) 
         {
-            setNodes(json.flow.nodes || []);
-            setEdges(json.flow.edges || []);
+            setNodes(flow.nodes || []);
+            setEdges(flow.edges || []);
+            console.log("loaded saved flow", nodes, edges)
         }
         else if (slides.length > 0) 
         {
-          // Fallback: reconstruct nodes from slides (simplified logic)
-          const reconstructed = slides.map((s, i) => ({
+            const reconstructed = slides.map((s, i) => 
+            ({
               id: s.id,
               type: s.type,
               position: { x: i * 300, y: 0 },
               data: s.data,
-          }));
-
-          setNodes(reconstructed);
+            }));
+            
+            setNodes(reconstructed);
+            console.log('reconstructed', reconstructed)
         }
-      }
-      catch (e) 
-      {
-        console.error("Load failed", e);
-      }
     }
 
-    function saveFlow()
+    async function saveFlow()
     {
       const flow = toObject();
       const dataToSave = 
@@ -122,8 +117,24 @@ export default function EditorArea({storyId})
         slides: generateSlidesPlayerData() // Also generate the "Slides" structure for the player
       };
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-      console.log('Data Saved');
+      const reqOptions = 
+      {
+        "method" : "POST",
+        "headers": { "Content-Type": "application/json" },
+        "body": JSON.stringify({flow: dataToSave})
+      };
+
+      try
+      {
+        const res = await fetch('/api/story/update/' + storyId, reqOptions)
+        if(res.ok) return true;
+        else return false;
+      }
+      catch(err)
+      {
+        console.error(err);
+        return false;
+      }
     };
 
     function generateSlidesPlayerData()
@@ -149,9 +160,9 @@ export default function EditorArea({storyId})
       return data;
     }
 
-    function handlePlay()
+    async function handlePlay()
     {
-      saveFlow(); // Auto-save before play
+      await saveFlow(); // Auto-save before play
 
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return;

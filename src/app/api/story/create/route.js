@@ -25,11 +25,10 @@ export async function POST(req)
             description,
             flow,
             userid
-        }
-        ]).select().single();
+        }]).select().single();
 
         if(error) throw new Error(error.message);
-        return new Response(JSON.stringify({ message: "Story created successfully", storyId: data.id }), { status: 200 });
+        return new Response(JSON.stringify({ message: "Story created successfully", storyId: data.storyid }), { status: 200 });
     }
     catch(err)
     {

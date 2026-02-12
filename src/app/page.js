@@ -1,21 +1,27 @@
+import { getCurrentUser } from "@/services/getCurrentUser";
 import { faCompassDrafting, faFolderPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 
-export default function Home() 
+export default async function Home() 
 {
+    const user = await getCurrentUser();
+    console.log(user)
+    const name = user?.name ?? "User";
+
     return (
         <div className="w-screen h-screen bg-dark-blue-black p-3 sm:p-12">
             <nav className="w-full h-12 flex justify-between items-center">
-                <h2 className="text-white"></h2>
-
+                <img src='/logo.svg' className="w-12 h-auto"/>
                 <div className="flex justify-center items-center gap-4 px-2 rounded">
-                    <div className="rounded-full w-12 h-12 bg-deep-space-blue"></div>
-                    <h2 className="text-white font-semibold">Abhiraj</h2>
+                    <div className="rounded-full w-12 h-12 bg-deep-space-blue flex justify-center items-center font-extrabold text-white/50 text-2xl">{name[0].toUpperCase()}</div>
+                    <div>
+                        <h2 className="text-white font-semibold text-right">{name}</h2>
+                    </div>
                 </div>
             </nav>
-            <div className="w-full flex-col h-max min-h-64 my-12 flex justify-center">
-                <div className="w-full flex-wrap h-10 gap-3 flex justify-start items-center my-3">
+            <div className="w-full flex-col h-max min-h-64 flex justify-start items-start">
+                <div className="w-full flex-wrap h-10 gap-3 flex justify-center items-center my-3">
                     <input type="search" className="bg-shadow-grey w-full max-w-[320px] h-full p-2 rounded-lg hover:placeholder:text-tiger-orange/50 focus:placeholder:text-tiger-orange/50 outline text-white/80 placeholder:text-white/30 outline-white/10 focus:outline-tiger-orange" placeholder="Search.." />
                     <Link 
                         href={"/create"}
