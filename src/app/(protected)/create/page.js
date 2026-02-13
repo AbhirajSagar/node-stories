@@ -27,6 +27,7 @@ export default function Page()
 
             const req = await fetch('/api/story/create', requestOptions);
             const data = await req.json();
+            console.log(data);
             router.push(`/editor/${data.storyId}`);
         }
         catch(err)
@@ -41,8 +42,8 @@ export default function Page()
     }
 
     return (
-        <div className="w-screen h-screen bg-shadow-grey flex items-center justify-center p-3 sm:p-12">
-            <div className="w-full max-w-xl h-120 flex justify-center items-center flex-col bg-dark-blue-black border border-white/10 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div className='w-full h-screen flex bg-shadow-grey justify-center items-center'>
+            <div className="w-full sm:h-120 sm:w-xl sm:rounded-lg h-screen bg-dark-blue-black flex justify-center items-center flex-col p-6 sm:p-8">
                 {error && <p className='bg-red-500/10 text-white/50 rounded p-2 mb-4'>{error}</p>}
                 {isLoading ? <Loading/> : <Form createStory={createStory} setError={setError} error={error}/>}
             </div>
@@ -102,14 +103,14 @@ function Form({createStory, setError, error})
                 <div className="w-full flex gap-2">
                     <Link href={'/'} className="w-full p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer text-white/50 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5">
                         <FontAwesomeIcon icon={faX}/>
-                        <p>Cancel</p>
+                        <p className='text-xs'>Cancel</p>
                     </Link>
                     <button 
                         type="submit"
                         className="w-full p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer text-white/50 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5"
                     >
                         <FontAwesomeIcon icon={faUpRightFromSquare}/>
-                        <p>Open Editor</p>
+                        <p className='text-xs'>Open Editor</p>
                     </button>
                 </div> 
             </form>

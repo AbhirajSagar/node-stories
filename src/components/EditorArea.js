@@ -6,9 +6,9 @@ import { applyNodeChanges, applyEdgeChanges, addEdge, useReactFlow } from "@xyfl
 import { useRouter } from "next/navigation";
 
 // Components
-import NormalSlideNode from "@/components/customNodes/NormalSlideNode";
-import TextImageSlideNode from "@/components/customNodes/TextImageSlideNode";
-import TextVideoSlideNode from "@/components/customNodes/TextVideoSlideNode";
+import NormalSlideNode from "@/components/CustomNodes/NormalSlideNode";
+import TextImageSlideNode from "@/components/CustomNodes/TextImageSlideNode";
+import TextVideoSlideNode from "@/components/CustomNodes/TextVideoSlideNode";
 import { PaneContextMenu, EdgeContextMenu, ContextMenu } from "@/components/EditorMenu";
 import EditorToolbar from "@/components/EditorToolbar";
 import { Settings } from "@/components/StorySettings";
@@ -168,7 +168,7 @@ export default function EditorArea({storyId})
       if (!saved) return;
       
       sessionStorage.setItem(PLAYER_STORAGE_KEY, saved);
-      router.push("/player");
+      router.push("/player/" + storyId);
     };
 
     // --- Context Menus ---

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faPaintBrush, faSlidersH, faTimes } from "@fortawesome/free-solid-svg-icons";
-import { GeneralTabContent } from "./settingsTabContent/GeneralTabContent";
-import { AppearanceTabContent } from "./settingsTabContent/AppearanceTabContent";
-import { AdvancedTabContent } from "./settingsTabContent/AdvancedTabContent";
+import { GeneralTabContent } from "@/components/SettingsTabContent/GeneralTabContent";
+import { AppearanceTabContent } from "@/components/SettingsTabContent/AppearanceTabContent";
+import { AdvancedTabContent } from "@/components/SettingsTabContent/AdvancedTabContent";
 
 const TABS = [
     {

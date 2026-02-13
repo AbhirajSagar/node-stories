@@ -24,8 +24,11 @@ export default async function Drafts()
         
 
         return (
-            <div className="w-screen min-h-screen bg-dark-blue-black grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-3 sm:p-12">
-                {data.map(async (story,idx) => <StoryCard key={idx} story={story} />)}
+            <div className="w-full min-h-screen h-max bg-dark-blue-black lg:p-10">
+                <h2 className="w-full h-18 text-white/50 text-3xl font-semibold justify-start px-3 items-end flex">Drafts</h2>
+                <div className="grid gap-2 w-full grid-cols-1 p-3 min-[350px]:grid-cols-2 min-[576px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    {data.map(async (story,idx) => <StoryCard key={idx} story={story} />)}
+                </div>
             </div>
         );
     }
@@ -49,8 +52,8 @@ function StoryCard({story})
     const dateLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
     return (
-        <Link href={`/editor/${storyid}`} className="w-full bg-deep-space-blue outline outline-white/10 relative aspect-video rounded">
-            {thumbnailUrl ? <img src={thumbnailUrl} alt={name} className="w-full h-full object-cover rounded"/> : <div className="w-full h-full flex justify-center items-start p-5 text-white/50"><p>No Thumbnail Assigned</p></div>}
+        <Link href={`/editor/${storyid}`} className="w-full bg-deep-space-blue outline outline-white/10 relative aspect-9/16 rounded">
+            {/* {thumbnailUrl ? <img src={thumbnailUrl} alt={name} className="w-full h-full object-cover rounded"/> : <div className="w-full h-full flex justify-center items-start p-5 text-white/50"><p>No Thumbnail Assigned</p></div>} */}
             <div className="absolute bottom-0 left-0 right-0 p-3 rounded">
                 <h3 className="text-white font-bold text-lg">{name}</h3>
                 <p className="text-gray-400 text-xs">

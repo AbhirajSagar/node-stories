@@ -21,7 +21,7 @@ export async function POST(req)
 
         const { data, error } = await supabase.from('stories').insert([
         {
-            title,
+            name: title,
             description,
             flow,
             userid
