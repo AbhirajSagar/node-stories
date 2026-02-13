@@ -53,7 +53,7 @@ function VideoUploadOverlay({ isVisible })
 function VideoUploadContainer({videoUrl, isLoadingMedia, setIsLoadingMedia, onVideoUpload}) 
 {
   return (
-    <div className="relative w-full h-32 bg-deep-space-blue rounded-lg border border-dashed border-white/20 hover:border-tiger-orange transition-colors overflow-hidden group">
+    <div className="relative w-full aspect-[9/16] bg-deep-space-blue rounded-lg border border-dashed border-white/20 hover:border-tiger-orange transition-colors overflow-hidden group">
       {videoUrl && <VideoPreview videoUrl={videoUrl} setIsLoadingMedia={setIsLoadingMedia}/>}
       {isLoadingMedia && <VideoLoadingState />}
       {!videoUrl && !isLoadingMedia && <VideoUploadPlaceholder />}

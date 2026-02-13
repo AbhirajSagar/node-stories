@@ -43,7 +43,7 @@ function ImageUploadOverlay({ isVisible })
 function ImageUploadContainer({ imageUrl, onImageUpload }) 
 {
     return (
-        <div className="relative w-full h-32 bg-deep-space-blue rounded-lg border border-dashed border-white/20 hover:border-tiger-orange transition-colors overflow-hidden group">
+        <div className="relative w-full aspect-[9/16] bg-deep-space-blue rounded-lg border border-dashed border-white/20 hover:border-tiger-orange transition-colors overflow-hidden group">
             {imageUrl ? <ImagePreview imageUrl={imageUrl} /> : <ImageUploadPlaceholder />}
             <input type="file" accept="image/*" onChange={onImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Upload image"/>
             <ImageUploadOverlay isVisible={!!imageUrl} />

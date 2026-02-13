@@ -21,7 +21,6 @@ export default async function Drafts()
         console.log(data);
         
         if(error) throw error;
-        
 
         return (
             <div className="w-full min-h-screen h-max bg-dark-blue-black lg:p-10">
@@ -42,7 +41,8 @@ export default async function Drafts()
         )
     }
 }
-function StoryCard({story})
+
+export function StoryCard({story})
 {
     const {name, description, created_at, flow, storyid} = story;
     let {thumbnailUrl} = story;

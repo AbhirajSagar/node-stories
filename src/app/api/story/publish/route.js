@@ -1,6 +1,6 @@
 import { createClient } from "@/supabase/server";
 
-export default async function POST(req)
+export async function POST(req)
 {
     try
     {
@@ -14,12 +14,14 @@ export default async function POST(req)
         const genre = formData.get("genre");
         if(!genre) return new Response(JSON.stringify({message: "Genre is required"}),{status: 400});
         
+        console.table({storyid,thumbnail,genre})
+
         const supabase = await createClient();
         if(!supabase) return new Response(JSON.stringify({message: "Internal Server Error"}),{status: 500});
 
         const filePath = `thumbnails/${crypto.randomUUID()}`;
         const { data, error } = await supabase.storage.from('media-public').upload(filePath, thumbnail, {cacheControl: '3600',upsert: false});
-
+        console.log(data);
         if (error)
         {
             console.error('Supabase Storage Upload Error:', error);
@@ -27,34 +29,38 @@ export default async function POST(req)
         }
 
         const { data: publicUrlData, error: publicUrlError } = supabase.storage.from('media-public').getPublicUrl(filePath);
-        
+        console.log(publicUrlData);
+
         if (publicUrlError)
         {
             console.error('Supabase Get Public URL Error:', publicUrlError);
             return new Response(JSON.stringify('Error getting public url for the uploaded thumbnail'), { status: 500 });
         }
 
-        const { data: genreData, error: genreError} = supabase.from('genres').select('genreid').eq('name', genre).maybeSingle()
-        if(genreError)
-        {
-            console.error('Error while getting genre id');
-            return new Response(JSON.stringify('Error while getting genre id'), {status: 500});
-        }
-
-        console.log(genreData.genreid);
-        const {data: storyData, error: storyError} = supabase.from('stories')
+        const {data: storyData, error: storyError} = await supabase.from('stories')
         .update
         ({
             published: true,
-            thumbnailUrl: data.publicUrl,
-            genre: genreData.genreid
+            thumbnailUrl: publicUrlData.publicUrl,
+            genre: genre,
+            published_at: new Date().toISOString()
         })
         .eq('storyid',storyid)
+        .select();
 
-        return new Response({message: 'Published Successfully'}, {status: 200})
+        console.log(storyData);
+
+        if(storyError)
+        {
+            console.error('Error while updating the publishing status');
+            return new Response(JSON.stringify('Error while publishing the story'), {status: 500});
+        }
+
+        return new Response(JSON.stringify({message: 'Published Successfully', data: storyData}), {status: 200})
     }
     catch(err)
     {
-        
+        console.error('error occured while publishing');
+        return new Response(JSON.stringify({message: 'Internal Server Error'}), {status: 500})
     }
 }
