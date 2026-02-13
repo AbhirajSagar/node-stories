@@ -74,35 +74,33 @@ export default function EditorArea({storyId})
     async function tryLoadSavedFlow()
     {
         if(!storyId) return;
-        const req = await fetch(`/api/story/${storyId}`);
-        
-        const storyData = await req.json();
-        const data = storyData.data;
-        const flowData = data.flow;
-        const flow = flowData.flow;
 
-        const {slides, ...rest} = extractFlowData(flow, 0.1)
+        const res = await fetch(`/api/story/${storyId}`);
+        const { data: story } = await res.json();
 
-        setMeta(rest);
+        const { slides, ...metaData } = extractFlowData(story, 0.1);
+        const savedFlow = story.flow?.flow;
 
-        if (flow) 
+        setMeta((prev) => ({ ...prev, ...metaData }));
+
+        if (savedFlow)
         {
-            setNodes(flow.nodes || []);
-            setEdges(flow.edges || []);
-            console.log("loaded saved flow", nodes, edges)
+            setNodes(savedFlow.nodes || []);
+            setEdges(savedFlow.edges || []);
+            return;
         }
-        else if (slides.length > 0) 
+
+        if (slides.length > 0)
         {
-            const reconstructed = slides.map((s, i) => 
+            const reconstructedNodes = slides.map((slide, index) =>
             ({
-              id: s.id,
-              type: s.type,
-              position: { x: i * 300, y: 0 },
-              data: s.data,
+                id: slide.id,
+                type: slide.type,
+                position: { x: index * 300, y: 0 },
+                data: slide.data,
             }));
-            
-            setNodes(reconstructed);
-            console.log('reconstructed', reconstructed)
+
+            setNodes(reconstructedNodes);
         }
     }
 
@@ -162,14 +160,15 @@ export default function EditorArea({storyId})
 
     async function handlePlay()
     {
-      await saveFlow(); // Auto-save before play
-
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
-      
-      sessionStorage.setItem(PLAYER_STORAGE_KEY, saved);
+      await saveFlow();
       router.push("/player/" + storyId);
     };
+
+    async function handlePublishing()
+    {
+        await saveFlow();
+        router.push("/publish/" + storyId)
+    }
 
     // --- Context Menus ---
 
@@ -219,6 +218,7 @@ export default function EditorArea({storyId})
             <EditorToolbar
                 onSave={saveFlow}
                 onPlay={handlePlay}
+                onPublish={handlePublishing}
                 onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
             />
 

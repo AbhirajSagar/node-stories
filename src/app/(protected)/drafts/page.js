@@ -52,9 +52,9 @@ function StoryCard({story})
     const dateLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
     return (
-        <Link href={`/editor/${storyid}`} className="w-full bg-deep-space-blue outline outline-white/10 relative aspect-9/16 rounded">
-            {/* {thumbnailUrl ? <img src={thumbnailUrl} alt={name} className="w-full h-full object-cover rounded"/> : <div className="w-full h-full flex justify-center items-start p-5 text-white/50"><p>No Thumbnail Assigned</p></div>} */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 rounded">
+        <Link href={`/editor/${storyid}`} className="w-full overflow-hidden bg-deep-space-blue outline outline-white/10 relative aspect-9/16 rounded">
+            {thumbnailUrl ? <img src={thumbnailUrl} alt={name} className="w-full h-full hover:scale-110 transition-transform duration-300 ease-in-out object-cover rounded"/> : <div className="w-full h-full flex justify-center items-start p-5 text-white/50"><p>No Thumbnail Assigned</p></div>}
+            <div className="w-full bg-shadow-grey absolute bottom-0 left-0 right-0 p-3">
                 <h3 className="text-white font-bold text-lg">{name}</h3>
                 <p className="text-gray-400 text-xs">
                     {dateLabel}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { faFloppyDisk, faPlay, faUpload, faCog, faCheckCircle, faClock, faX } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-export default function EditorToolbar({ onSave, onPlay, onToggleSettings }) 
+export default function EditorToolbar({ onSave, onPlay, onPublish, onToggleSettings })
 {
   const btnClass = "p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer w-22 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5";
 
@@ -15,7 +15,7 @@ export default function EditorToolbar({ onSave, onPlay, onToggleSettings })
           <p className="text-sm">Play</p>
         </button>
         <div className="w-px h-8 bg-white/15"></div>
-        <button onClick={onPlay} className={btnClass} title="Play Preview">
+        <button onClick={onPublish} className={btnClass} title="Play Preview">
           <FontAwesomeIcon icon={faUpload} className="w-5 h-5" />
           <p className="text-sm">Publish</p>
         </button>
