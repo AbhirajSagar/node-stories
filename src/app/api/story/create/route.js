@@ -16,7 +16,18 @@ export async function POST(req)
         const flow = 
         {
             name: title,
-            description
+            description,
+            slides: [],
+            appearance:
+            {
+                bg_from: '#0f172a',
+                bg_to: '#020617',
+                hovered_option_from: '#ED8836',
+                hovered_option_to: '#FB923C',
+                option_from:'#ffffff',
+                option_to:'#e2e2e2'
+            },
+            timing: { delay: 0 },
         };
 
         const { data, error } = await supabase.from('stories').insert([

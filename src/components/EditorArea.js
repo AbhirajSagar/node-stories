@@ -78,7 +78,7 @@ export default function EditorArea({storyId})
         const res = await fetch(`/api/story/${storyId}`);
         const { data: story } = await res.json();
 
-        const { slides, ...metaData } = extractFlowData(story, 0.1);
+        const { slides, ...metaData } = extractFlowData(story, story.version);
         const savedFlow = story.flow?.flow;
 
         setMeta((prev) => ({ ...prev, ...metaData }));

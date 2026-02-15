@@ -1,5 +1,7 @@
 import { getCurrentUser } from "@/services/getCurrentUser";
 import { createClient } from "@/supabase/server";
+import { faCircleQuestion } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 
 export default async function Drafts()
@@ -24,9 +26,9 @@ export default async function Drafts()
 
         return (
             <div className="w-full min-h-screen h-max bg-dark-blue-black lg:p-10">
-                <h2 className="w-full h-18 text-white/50 text-3xl font-semibold justify-start px-3 items-end flex">Drafts</h2>
+                <h2 className="w-full h-18 text-white/50 text-xl font-semibold justify-center sm:justify-start sm:text-3xl  px-3 sm:text-left items-end flex">Drafts</h2>
                 <div className="grid gap-2 w-full grid-cols-1 p-3 min-[350px]:grid-cols-2 min-[576px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                    {data.map(async (story,idx) => <StoryCard key={idx} story={story} />)}
+                    {data.length > 0 ? data.map(async (story,idx) => <StoryCard key={idx} story={story} />) : <NoDrafts/>}
                 </div>
             </div>
         );
@@ -40,6 +42,17 @@ export default async function Drafts()
             </div>
         )
     }
+}
+
+function NoDrafts()
+{
+    return (
+        <div className="col-span-full h-84 flex justify-center flex-col items-center">
+            <FontAwesomeIcon icon={faCircleQuestion} className="w-24 h-24 text-white/50 mb-5 outline rounded-full outline-offset-5 outline-dashed"/>
+            <h2 className="font-semibold text-white/50 mt-5">You have no drafts</h2>
+            <Link href='/create' className="w-42 text-sm mx-auto text-center mt-3 bg-shadow-grey py-2 rounded outline outline-white/10 text-white/50">Create New Story</Link>
+        </div>
+    )
 }
 
 export function StoryCard({story})

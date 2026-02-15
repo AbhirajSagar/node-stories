@@ -15,6 +15,8 @@ export default async function PlayerPage({params})
         .select('*')
         .eq('storyid',id)
         .maybeSingle();
+        
+        console.log(data);
 
         if(error) throw error
         return <Player storyJson={data.flow}/>

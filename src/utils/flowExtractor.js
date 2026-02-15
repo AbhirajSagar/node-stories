@@ -1,27 +1,39 @@
 export default function extractFlowData(flowData, version) 
 {
-    // Default structure to ensure no undefined errors
     const defaultData = 
     {
-        slides: [],
-        appearance: {},
-        name: "",
+        name: "",   
         description: "",
+        slides: [],
+        appearance:
+        {
+            bg_from: '#0f172a',
+            bg_to: '#020617',
+            hovered_option_from: '#ED8836',
+            hovered_option_to: '#FB923C',
+            option_from:'#ffffff',
+            option_to:'#e2e2e2'
+        },
         timing: { delay: 0 },
     };
 
     if (!flowData) return defaultData;
 
-    
-    if (version === 0.1 || !version) 
+    if (version === 0.1 || version == null) 
     {
         return {
-            slides: flowData.slides || [],
-            appearance: flowData.appearance || {},
-            name: flowData.name || "",
-            description: flowData.description || "",
-            timing: flowData.timing || {},
-        };
+            name: flowData.name ?? defaultData.name,
+            description: flowData.description ?? defaultData.description,
+            slides: flowData.slides ?? defaultData.slides,
+            appearance: {
+                ...defaultData.appearance,
+                ...(flowData.appearance ?? {})
+            },
+            timing: {
+                ...defaultData.timing,
+                ...(flowData.timing ?? {})
+            }
+        }
     }
 
     return defaultData;

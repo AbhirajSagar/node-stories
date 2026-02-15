@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCloudUploadAlt, faImage, faPenNib } from "@fortawesome/free-solid-svg-icons";
+import { faClock, faCloudUploadAlt, faHourglass, faImage, faPenNib } from "@fortawesome/free-solid-svg-icons";
 
 export default function PublishPage({ storyData }) {
     const router = useRouter();
@@ -62,7 +62,7 @@ export default function PublishPage({ storyData }) {
         setThumbnailFile(file);
     };
 
-    if(!isLoading) return <Loading/>
+    if(isLoading) return <Loading/>
 
     return (
         <div className="w-full min-h-screen bg-dark-blue-black text-white flex items-center justify-center p-3 sm:p-6 lg:p-12">
@@ -185,8 +185,9 @@ function Loading()
                     <h1 className="text-base md:text-lg font-semibold tracking-wide">Publish Story</h1>
                 </div>
 
-                <div className="p-4 md:p-8">
-                    
+                <div className="p-4 md:p-8 flex justify-center items-center flex-col gap-4 min-h-64">
+                    <FontAwesomeIcon icon={faHourglass} bounce={true} className="text-8xl text-white/50"/>
+                    <h2>Publishing...</h2>
                 </div>
             </div>
         </div>

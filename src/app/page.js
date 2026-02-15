@@ -15,7 +15,7 @@ export default async function Home()
         const supabase = await createClient();
         if(!supabase) throw new Error('Failed to connect to database');
 
-        const { data, error } = await supabase.from('stories').select('*').eq('published', true);
+        const { data, error } = await supabase.from('stories').select('*, genres(name)').eq('published', true);
         if(error) throw error;
 
         return (
@@ -100,9 +100,10 @@ export function StoryCard({story})
             {thumbnailUrl ? <img src={thumbnailUrl} alt={name} className="w-full h-full hover:scale-110 transition-transform duration-300 ease-in-out object-cover rounded"/> : <div className="w-full h-full flex justify-center items-start p-5 text-white/50"><p>No Thumbnail Assigned</p></div>}
             <div className="w-full bg-shadow-grey absolute bottom-0 left-0 right-0 p-3">
                 <h3 className="text-white font-bold text-lg">{name}</h3>
-                <p className="text-gray-400 text-xs">
-                    {dateLabel}
-                </p>
+                <div className="w-full flex justify-between items-center">
+                    <p className="text-gray-400 text-xs">{dateLabel}</p>
+                    {story.genres?.name && <div className="bg-red-500/40 outline-red-500 h-6 flex justify-center items-center outline text-xs text-white/50 w-max rounded-full px-3 my-2">{story.genres.name.toUpperCase()}</div>}
+                </div>
             </div>
         </Link>
     )

@@ -49,3 +49,21 @@ body {
         "Helvetica Neue",
         Arial;
 }
+
+@keyframes hg {
+                    0% { opacity: 1 }
+                    33% { opacity: 0 }
+                    100% { opacity: 0 }
+                }
+
+                .animate-hg1 {
+                    animation: hg 1.2s infinite;
+                }
+
+                .animate-hg2 {
+                    animation: hg 1.2s infinite 0.4s;
+                }
+
+                .animate-hg3 {
+                    animation: hg 1.2s infinite 0.8s;
+                }
