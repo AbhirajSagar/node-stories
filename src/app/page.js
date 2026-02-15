@@ -3,50 +3,42 @@ import { faCircleUser, faCompassDrafting, faFolderPlus, faMagnifyingGlass, faPer
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { createClient } from "@/supabase/server";
 import Link from "next/link";
-import ErrorComponent from "@/components/Error";
 import ProfileIcon from "@/components/ProfileIcon";
 
 export default async function Home() 
 {
-    try
-    {
-        const {userid, name} = await getCurrentUser();
-        
-        const supabase = await createClient();
-        if(!supabase) throw new Error('Failed to connect to database');
+    const user = await getCurrentUser();
+    const name = user?.name;
+    
+    const supabase = await createClient();
+    if(!supabase) throw new Error('Failed to connect to database');
 
-        const { data, error } = await supabase.from('stories').select('*, genres(name)').eq('published', true);
-        if(error) throw error;
+    const { data, error } = await supabase.from('stories').select('*, genres(name)').eq('published', true);
+    if(error) throw error;
 
-        return (
-            <div className="w-full min-h-screen h-max bg-dark-blue-black p-3 sm:p-12">
-                <Navbar name={name} />
-                <QuickActions faFolderPlus={faFolderPlus} faCompassDrafting={faCompassDrafting} />
-                <Feed stories={data}/>
-            </div>
-        );
-    }
-    catch(err)
-    {
-        console.log(err);
-        return <ErrorComponent err={err}/>
-    }
+    return (
+        <div className="w-full min-h-screen h-max bg-dark-blue-black p-3 sm:p-12">
+            <Navbar name={name ?? 'User'} redirectToAuth={!name}/>
+            <QuickActions faFolderPlus={faFolderPlus} faCompassDrafting={faCompassDrafting} />
+            <Feed stories={data}/>
+        </div>
+    );
 }
 
-function Navbar({name}) 
+function Navbar({name, redirectToAuth}) 
 {
     return (
         <nav className="w-full  h-12 flex sm:justify-between justify-center mb-5 items-center">
             <img src='/logo.svg' className="w-12 h-auto" />
-            <Account name={name} />
+            <Account name={name} redirectToAuth={redirectToAuth}/>
         </nav>
     );
 }
 
-function Account({name}) 
+function Account({name,redirectToAuth}) 
 {
     return (
-        <Link href={'/profile'} className="hidden hover:bg-shadow-grey cursor-pointer lg:outline-white/10 p-2 outline-white/10 sm:flex justify-center items-center gap-4 rounded-full">
+        <Link href={redirectToAuth ? '/auth' : '/profile'} className="hidden hover:bg-shadow-grey cursor-pointer lg:outline-white/10 p-2 outline-white/10 sm:flex justify-center items-center gap-4 rounded-full">
             <ProfileIcon name={name} />
             <h2 className="hidden lg:block text-white font-semibold text-right mr-2">{name.split(' ')[0]}</h2>
         </Link>
