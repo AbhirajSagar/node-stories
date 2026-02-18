@@ -19,7 +19,7 @@ export default async function PlayerPage({params})
         console.log(data);
 
         if(error) throw error
-        return <Player storyJson={data.flow}/>
+        return <Player storyJson={data.flow} id={id}/>
     }
     catch(err)
     {

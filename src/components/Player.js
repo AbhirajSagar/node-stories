@@ -3,17 +3,19 @@
 import { useContext, useState, useRef, useEffect } from "react";
 import { createContext } from "react";
 
-import { faPlay, faPause, faVolumeXmark, faVolumeHigh } from "@fortawesome/free-solid-svg-icons";
+import { faPlay, faPause, faVolumeXmark, faVolumeHigh, faQuestionCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useRouter } from "next/navigation";
 
 const GradientContext = createContext(undefined);
 const SlidesContext = createContext(undefined);
 
-export default function PlayerPage({storyJson})
+export default function PlayerPage({storyJson,id})
 {
     const slides = storyJson.slides;
-    const [curSlide, setCurSlide] = useState(slides[0]);
-    
+    const [curSlide, setCurSlide] = useState(slides.length > 0 ? slides[0] : undefined);
+    const router = useRouter();
+
     const {bg_from, bg_to, hovered_option_from, hovered_option_to, option_from, option_to} = storyJson.appearance;
     const {delay} = storyJson.timing;
     
@@ -24,10 +26,21 @@ export default function PlayerPage({storyJson})
     return (
         <GradientContext.Provider value={{bgGradient, choiceBtnGradient, choiceBtnHoveredGradient}}>
             <SlidesContext.Provider value={{slides, curSlide, setCurSlide, delay : delay * 1000}}>
-                <Slide curSlide={curSlide}/>
+                {curSlide ? <Slide curSlide={curSlide}/> : <NoSlides router={router} id={id}/>}
             </SlidesContext.Provider>
         </GradientContext.Provider>
     )
+}
+
+function NoSlides({router,id})
+{
+    return (
+        <div className="w-full min-h-screen flex justify-center items-center flex-col bg-dark-blue-black">
+            <FontAwesomeIcon icon={faQuestionCircle} className="text-7xl text-white/50 mb-12"/>
+            <p className="text-lg text-white/70">No Story Data Found</p>
+            <button onClick={() => router.push('/editor/' + id)} className="p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer w-22 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5 mt-4 text-white/50">Back</button>
+        </div>
+    );
 }
 
 function Slide({curSlide})
