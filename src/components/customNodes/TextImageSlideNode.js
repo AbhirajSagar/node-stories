@@ -1,144 +1,118 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {Handle, Position, useReactFlow, useUpdateNodeInternals} from "@xyflow/react";
+import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCloudUploadAlt, faImage } from "@fortawesome/free-solid-svg-icons";
-import {saveMediaToStorage} from "@/services/uploadService.js";
-import Toolbar from "../NodeToolbar";
+import { SaveFileToProjectDB, LoadFileFromProjectDB } from "@/utils/FileUtils";
+import NodeWrapper from "./NodeWrapper";
 import Choices from "../Choices";
 
-function ImageUploadPlaceholder() 
-{
-    return (
-        <div className="flex flex-col items-center justify-center h-full text-white/40">
-            <FontAwesomeIcon icon={faImage} className="text-2xl mb-2" />
-            <span className="text-xs">Upload Image</span>
-        </div>
-    );
-}
-
-function ImagePreview({ imageUrl }) 
-{
-    return (
-        <img
-            src={imageUrl}
-            alt="Slide"
-            className="w-full h-full object-cover"
-        />
-    );
-}
-
-function ImageUploadOverlay({ isVisible }) 
-{
-    if (!isVisible) return null;
-
-    return (
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-            <FontAwesomeIcon icon={faCloudUploadAlt} className="text-white" />
-        </div>
-    );
-}
-
-function ImageUploadContainer({ imageUrl, onImageUpload }) 
-{
-    return (
-        <div className="relative w-full aspect-[9/16] bg-deep-space-blue rounded-lg border border-dashed border-white/20 hover:border-tiger-orange transition-colors overflow-hidden group">
-            {imageUrl ? <ImagePreview imageUrl={imageUrl} /> : <ImageUploadPlaceholder />}
-            <input type="file" accept="image/*" onChange={onImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Upload image"/>
-            <ImageUploadOverlay isVisible={!!imageUrl} />
-        </div>
-    );
-}
-
-export default function TextImageSlideNode({ id, selected, data }) 
+export default function TextImageSlideNode({ id, selected, data })
 {
     const { updateNodeData, setNodes, setEdges } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
-    const [previewUrl, setPreviewUrl] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(undefined);
 
+    // Load media on mount or when key/project changes
     useEffect(() => 
     {
-        if (data.key) 
+        let activeUrl = null;
+        async function LoadMedia()
         {
-            setPreviewUrl(data.key);
+            if (data.key && data.projectId)
+            {
+                const url = await LoadFileFromProjectDB(data.projectId, id);
+                if (url)
+                {
+                    activeUrl = url;
+                    setPreviewUrl(url);
+                }
+            }
         }
-    }, [data.key]);
+        LoadMedia();
 
-    const handleImageUpload = async (e) => 
+        // Cleanup to prevent memory leaks
+        return () => { if (activeUrl) URL.revokeObjectURL(activeUrl); };
+    }, [id, data.key, data.projectId]);
+
+    async function HandleImageUpload(e)
     {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || !data.projectId) return;
 
-        try 
+        try
         {
-            const url = await saveMediaToStorage(file, "image");
-            setPreviewUrl(url);
-            updateNodeData(id, { key: url });
-        } 
-        catch (error) 
+            await SaveFileToProjectDB(data.projectId, id, file);
+            // Update node data to trigger re-renders and mark as having content
+            updateNodeData(id, { key: "exists" });
+        }
+        catch (error)
         {
             console.error("Failed to save image", error);
         }
-    };
+    }
 
-    const handleTextChange = (e) => {
+    function HandleTextChange(e)
+    {
         updateNodeData(id, { text: e.target.value });
-    };
+    }
 
-    const handleChoiceChange = (idx, val) => {
+    function HandleChoiceChange(idx, val)
+    {
         const newChoices = [...(data.choices || [])];
         newChoices[idx] = { ...newChoices[idx], content: val };
         updateNodeData(id, { choices: newChoices });
-    };
+    }
 
-    const addChoice = () => {
+    function AddChoice()
+    {
         const current = data.choices || [];
         if (current.length >= 6) return;
-        updateNodeData(id, {
-            choices: [...current, { content: "", connection: null }],
-        });
+        updateNodeData(id, { choices: [...current, { content: "", connection: null }] });
         setTimeout(() => updateNodeInternals(id), 0);
-    };
+    }
 
-    const deleteNode = () => {
+    function DeleteNode()
+    {
         setNodes((nds) => nds.filter((n) => n.id !== id));
-        setEdges((eds) =>
-            eds.filter((e) => e.source !== id && e.target !== id)
-        );
-    };
+        setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    }
 
     return (
-        <div
-            className={`bg-shadow-grey p-3 w-64 rounded-lg shadow-xl text-white transition-all duration-200 ${
-                selected ? "ring-2 ring-tiger-orange" : "border border-white/10"
-            }`}
-        >
-            <Handle
-                type="target"
-                position={Position.Left}
-                className="!bg-white !w-3 !h-3"
-            />
-            <Toolbar onAddChoice={addChoice} onDeleteNode={deleteNode} />
-
-            <div className="flex flex-col gap-3 mt-2 nodrag">
-                <ImageUploadContainer
-                    imageUrl={previewUrl}
-                    onImageUpload={handleImageUpload}
-                />
-
-                <textarea
-                    value={data.text || ""}
-                    onChange={handleTextChange}
-                    placeholder="Caption text..."
-                    className="bg-deep-space-blue rounded p-2 text-sm font-light w-full h-16 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange"
-                />
-
-                <Choices
-                    choices={data.choices || []}
-                    onChoiceChange={handleChoiceChange}
+        <NodeWrapper id={id} selected={selected} onAddChoice={AddChoice} onDeleteNode={DeleteNode}>
+            <div className="group">
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block group-hover:text-tiger-orange transition-colors">Visual</label>
+                <div className="relative w-full aspect-[16/9] bg-black/20 rounded-lg border border-dashed border-white/10 hover:border-tiger-orange/50 transition-colors overflow-hidden group/image">
+                    {previewUrl ? (
+                        <img src={previewUrl} className="w-full h-full object-cover" alt="Slide" />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-white/20 pointer-events-none transition-colors group-hover/image:text-white/40">
+                            <FontAwesomeIcon icon={faImage} className="text-2xl mb-2" />
+                            <span className="text-[10px] font-medium">Drop Image Here</span>
+                        </div>
+                    )}
+                    <input type="file" accept="image/*" onChange={HandleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    {previewUrl && (
+                        <div className="absolute inset-0 bg-shadow-grey/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none backdrop-blur-sm">
+                            <FontAwesomeIcon icon={faCloudUploadAlt} className="text-tiger-orange text-xl" />
+                        </div>
+                    )}
+                </div>
+            </div>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Caption</label>
+                <textarea 
+                    value={data.text || ""} 
+                    onChange={HandleTextChange} 
+                    placeholder="Describe the scene..." 
+                    className="bg-black/20 text-white rounded-md p-3 text-sm font-light w-full h-20 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange border border-white/5 transition-all placeholder:text-white/20"
                 />
             </div>
-        </div>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Decisions</label>
+                <Choices choices={data.choices || []} onChoiceChange={HandleChoiceChange} />
+            </div>
+        </NodeWrapper>
     );
 }

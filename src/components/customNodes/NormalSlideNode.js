@@ -1,34 +1,35 @@
 "use client";
+
 import React, { useCallback } from "react";
-import { Handle, Position, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
-import Toolbar from "../NodeToolbar";
+import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faAlignLeft } from "@fortawesome/free-solid-svg-icons";
+import NodeWrapper from "./NodeWrapper";
 import Choices from "../Choices";
 
-export default function NormalSlideNode({ id, selected, data }) 
+export default function NormalSlideNode({ id, selected, data })
 {
     const { updateNodeData, setNodes, setEdges } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
 
-    const handleTextChange = useCallback((e) => updateNodeData(id, { text: e.target.value }), [id, updateNodeData]);
-    const handleChoiceChange = useCallback
-    (
-        (idx, newValue) => 
-        {
-            const newChoices = [...(data.choices || [])];
-            newChoices[idx] = { ...newChoices[idx], content: newValue };
-            updateNodeData(id, { choices: newChoices });
-        },
-        [id, data.choices, updateNodeData]
-    );
+    const handleTextChange = useCallback((e) => 
+    {
+        updateNodeData(id, { text: e.target.value });
+    }, [id, updateNodeData]);
+
+    const handleChoiceChange = useCallback((idx, newValue) => 
+    {
+        const newChoices = [...(data.choices || [])];
+        newChoices[idx] = { ...newChoices[idx], content: newValue };
+        updateNodeData(id, { choices: newChoices });
+    }, [id, data.choices, updateNodeData]);
 
     const addChoice = useCallback(() => 
     {
         const currentChoices = data.choices || [];
-        if (currentChoices.length >= 6) return; // Limit choices
-
+        if (currentChoices.length >= 6) return;
         updateNodeData(id, { choices: [...currentChoices, { content: "", connection: null }] });
         setTimeout(() => updateNodeInternals(id), 0);
-
     }, [id, data.choices, updateNodeData, updateNodeInternals]);
 
     const deleteNode = useCallback(() => 
@@ -38,31 +39,24 @@ export default function NormalSlideNode({ id, selected, data })
     }, [id, setNodes, setEdges]);
 
     return (
-        <div className={`bg-shadow-grey p-3 w-64 rounded-lg shadow-xl text-white transition-all duration-200 ${selected ? "ring-2 ring-tiger-orange" : "border border-white/10"}`}>
-            <Handle type="target" position={Position.Left} className="!bg-white !w-3 !h-3"/>
-            <Toolbar onAddChoice={addChoice} onDeleteNode={deleteNode} />
-
-            <div className="flex flex-col gap-3 mt-2 nodrag cursor-default">
-                <label className="text-[10px] uppercase tracking-wider text-white/50 font-bold">
-                    Text Content
+        <NodeWrapper id={id} selected={selected} onAddChoice={addChoice} onDeleteNode={deleteNode}>
+            <div className="group">
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 flex items-center gap-2 group-hover:text-tiger-orange transition-colors">
+                    <FontAwesomeIcon icon={faAlignLeft} className="text-sm" />
+                    <span>Story Content</span>
                 </label>
-                <textarea
-                    value={data.text || ""}
-                    onChange={handleTextChange}
-                    placeholder="Type your story segment..."
-                    className="bg-deep-space-blue rounded p-2 text-sm font-light w-full h-24 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange border border-transparent"
+                
+                <textarea 
+                    value={data.text || ""} 
+                    onChange={handleTextChange} 
+                    placeholder="Write the main story text here..." 
+                    className="bg-black/20 text-white rounded-lg p-4 text-sm font-light w-full h-48 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange border border-white/5 transition-all placeholder:text-white/20 leading-relaxed"
                 />
-
-                <div className="mt-1">
-                    <label className="text-[10px] uppercase tracking-wider text-white/50 font-bold">
-                        Decisions
-                    </label>
-                    <Choices
-                        choices={data.choices || []}
-                        onChoiceChange={handleChoiceChange}
-                    />
-                </div>
             </div>
-        </div>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Decisions</label>
+                <Choices choices={data.choices || []} onChoiceChange={handleChoiceChange}/>
+            </div>
+        </NodeWrapper>
     );
 }

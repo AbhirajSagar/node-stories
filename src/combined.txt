@@ -1,0 +1,1885 @@
+
+===== D:\Projects\azuned\src\app\player\preview\page.js =====
+
+"use client";
+
+import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faQuestionCircle, faPlay, faPause, faVolumeHigh, faVolumeXmark } from "@fortawesome/free-solid-svg-icons";
+
+const GradientContext = createContext(undefined);
+const SlidesContext = createContext(undefined);
+
+export default function PlayerPage()
+{
+    const [storyData, setStoryData] = useState(null);
+    const params = useParams(); // Keep for structure, though we use localStorage
+    const router = useRouter();
+
+    useEffect(() => 
+    {
+        // For the tool version, we primarily use "preview" mode from localStorage
+        // OR the user could theoretically upload a file here too, but simpler to read storage.
+        const cached = localStorage.getItem("azuned_preview");
+        if(cached) setStoryData(JSON.parse(cached));
+    }, []);
+
+    if(!storyData) return <Loading/>;
+
+    const { slides, appearance, timing } = storyData;
+    const { bg_from, bg_to, hovered_option_from, hovered_option_to, option_from, option_to } = appearance || {};
+    
+    // Fallbacks
+    const bgGradient = `linear-gradient(135deg, ${bg_from || '#000'}, ${bg_to || '#333'})`;
+    const choiceBtnGradient = `linear-gradient(135deg, ${option_from || '#fff'}, ${option_to || '#eee'})`;
+    const choiceBtnHoveredGradient = `linear-gradient(135deg, ${hovered_option_from || 'orange'}, ${hovered_option_to || 'red'})`;
+
+    return (
+        <GradientContext.Provider value={{ bgGradient, choiceBtnGradient, choiceBtnHoveredGradient }}>
+            <SlidesContext.Provider value={{ slides, curSlide: slides[0], delay: (timing?.delay || 0) * 1000 }}>
+                <StoryRunner initialSlide={slides[0]} />
+            </SlidesContext.Provider>
+        </GradientContext.Provider>
+    );
+}
+
+function Loading()
+{
+    return <div className="w-full h-screen bg-dark-blue-black flex justify-center items-center text-white/50">Loading Preview...</div>;
+}
+
+function StoryRunner({ initialSlide })
+{
+    const { slides } = useContext(SlidesContext);
+    const { bgGradient } = useContext(GradientContext);
+    const [curSlide, setCurSlide] = useState(initialSlide);
+
+    function ChangeSlide(targetId)
+    {
+        const next = slides.find(s => s.id === targetId);
+        if(next) setCurSlide(next);
+    }
+
+    if(!curSlide) return <div className="text-white">End of Story</div>;
+
+    const props = { curSlide, onChangeSlide: ChangeSlide };
+
+    return (
+        <div className="w-full h-screen relative overflow-hidden" style={{ background: bgGradient }}>
+            {curSlide.type === 'normal' && <NormalSlide {...props} />}
+            {curSlide.type === 'image' && <MediaSlide {...props} type="image" />}
+            {curSlide.type === 'video' && <MediaSlide {...props} type="video" />}
+            {curSlide.type === 'audio' && <AudioSlide {...props} />}
+        </div>
+    );
+}
+
+// Reusable Components for Slides
+
+function ChoicesList({ choices, onChangeSlide })
+{
+    const { delay } = useContext(SlidesContext);
+    const [visible, setVisible] = useState(false);
+    
+    useEffect(() => 
+    {
+        setVisible(false);
+        const timer = setTimeout(() => setVisible(true), delay);
+        return () => clearTimeout(timer);
+    }, [choices, delay]);
+
+    if (!visible) return null;
+
+    return (
+        <div className="absolute w-full p-6 bottom-0 flex flex-col gap-3 justify-end items-center pb-12 bg-gradient-to-t from-black/80 to-transparent pt-24">
+            {choices.map((c, i) => (
+                <ChoiceButton key={i} text={c.content} onClick={() => onChangeSlide(c.connection)} />
+            ))}
+        </div>
+    );
+}
+
+function ChoiceButton({ text, onClick })
+{
+    const { choiceBtnGradient, choiceBtnHoveredGradient } = useContext(GradientContext);
+    const [hover, setHover] = useState(false);
+
+    return (
+        <button 
+            onClick={onClick} 
+            onMouseEnter={() => setHover(true)} 
+            onMouseLeave={() => setHover(false)}
+            className="w-full max-w-md p-3 rounded-lg font-medium text-dark-blue-black shadow-lg transform active:scale-95 transition-all"
+            style={{ background: hover ? choiceBtnHoveredGradient : choiceBtnGradient }}
+        >
+            {text}
+        </button>
+    );
+}
+
+function NormalSlide({ curSlide, onChangeSlide })
+{
+    return (
+        <div className="w-full h-full flex flex-col justify-center items-center max-w-[56.25vh] mx-auto outline outline-white/5 relative">
+            <h2 className="px-6 text-white text-3xl font-light text-center leading-relaxed drop-shadow-md">{curSlide.data.text}</h2>
+            <ChoicesList choices={curSlide.data.choices} onChangeSlide={onChangeSlide} />
+        </div>
+    );
+}
+
+function MediaSlide({ curSlide, onChangeSlide, type })
+{
+    return (
+        <div className="w-full h-full relative bg-black">
+             {/* Background Blur */}
+            {type === 'image' && <div className="absolute inset-0 bg-cover bg-center blur-2xl opacity-50" style={{ backgroundImage: `url('${curSlide.data.key}')` }}></div>}
+            
+            <div className="relative w-full h-full max-w-[56.25vh] mx-auto bg-black flex flex-col">
+                {type === 'image' ? (
+                    <img src={curSlide.data.key} className="w-full h-full object-cover" alt="Story" />
+                ) : (
+                    <video src={curSlide.data.key} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+                )}
+                
+                {curSlide.data.text && (
+                    <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 px-6 text-center z-10">
+                         <span className="bg-black/40 backdrop-blur-md text-white p-2 rounded text-xl">{curSlide.data.text}</span>
+                    </div>
+                )}
+
+                <ChoicesList choices={curSlide.data.choices} onChangeSlide={onChangeSlide} />
+            </div>
+        </div>
+    );
+}
+
+function AudioSlide({ curSlide, onChangeSlide })
+{
+    // Simplified audio player that auto-plays
+    return (
+        <div className="w-full h-full flex flex-col justify-center items-center max-w-[56.25vh] mx-auto outline outline-white/5 relative">
+            <audio src={curSlide.data.key} autoPlay loop />
+            <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center animate-pulse mb-8">
+                <FontAwesomeIcon icon={faVolumeHigh} className="text-4xl text-white/70" />
+            </div>
+            <h2 className="px-6 text-white text-3xl font-light text-center leading-relaxed drop-shadow-md">{curSlide.data.text}</h2>
+            <ChoicesList choices={curSlide.data.choices} onChangeSlide={onChangeSlide} />
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\app\globals.css =====
+
+@import "tailwindcss";
+
+:root {
+    --shadow-grey: #1a202cff;
+    --deep-space-blue: #222b3cff;
+    --shadow-grey-2: #1a202cff;
+    --tiger-orange: #ed8836ff;
+    --charcoal-blue: #2c3848ff;
+    --dark-blue-black: #11141C;
+
+    --bg-base: #f7f9fc;
+    --bg-elevated: #ffffff;
+    --border-subtle: #d0d5dd;
+    --accent-primary: #ed8836;
+    --text-muted: #667085;
+}
+
+@theme inline {
+    --color-shadow-grey: var(--shadow-grey);
+    --color-deep-space-blue: var(--deep-space-blue);
+    --color-shadow-grey-2: var(--shadow-grey-2);
+    --color-tiger-orange: var(--tiger-orange);
+    --color-charcoal-blue: var(--charcoal-blue);
+    --color-dark-blue-black: var(--dark-blue-black);
+
+    --font-outfit: var(--font-outfit);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --shadow-grey: #1a202cff;
+        --deep-space-blue: #222b3cff;
+        --shadow-grey-2: #1a202cff;
+        --tiger-orange: #ed8836ff;
+        --charcoal-blue: #2c3848ff;
+    }
+}
+
+/* Apply Outfit font globally */
+html,
+body {
+    font-family:
+        "Outfit",
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        "Segoe UI",
+        Roboto,
+        "Helvetica Neue",
+        Arial;
+}
+
+@keyframes hg {
+                    0% { opacity: 1 }
+                    33% { opacity: 0 }
+                    100% { opacity: 0 }
+                }
+
+                .animate-hg1 {
+                    animation: hg 1.2s infinite;
+                }
+
+                .animate-hg2 {
+                    animation: hg 1.2s infinite 0.4s;
+                }
+
+                .animate-hg3 {
+                    animation: hg 1.2s infinite 0.8s;
+                }
+
+===== D:\Projects\azuned\src\app\layout.js =====
+
+import { Outfit } from "next/font/google";
+import "./globals.css";
+
+const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
+export const metadata = { title: "project" };
+
+export default function RootLayout({ children }) 
+{
+    return (
+        <html lang="en">
+            <body className={`${outfit.variable} antialiased`}>{children}</body>
+        </html>
+    );
+}
+
+===== D:\Projects\azuned\src\app\loading.js =====
+
+import { faEllipsis, faHourglass1, faHourglass2, faHourglass3 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+export default function Loader()
+{
+    return(
+        <div className="w-screen h-screen bg-dark-blue-black flex justify-center items-center flex-col">
+            <FontAwesomeIcon icon={faEllipsis} className="w-16 h-16 text-tiger-orange animate-pulse" />
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\app\page.js =====
+
+"use client";
+
+import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faFileUpload, faProjectDiagram } from "@fortawesome/free-solid-svg-icons";
+import { LoadJsonFromFile } from "@/utils/FileUtils";
+import EditorArea from "@/components/EditorArea";
+import { ReactFlowProvider } from "@xyflow/react";
+
+export default function Home() 
+{
+    const [storyData, setStoryData] = useState(null);
+    const [view, setView] = useState("dashboard"); // 'dashboard' | 'editor'
+
+    async function HandleFileUpload(e)
+    {
+        const file = e.target.files?.[0];
+        if(!file) return;
+        
+        try
+        {
+            const json = await LoadJsonFromFile(file);
+            setStoryData(json);
+            setView("editor");
+        }
+        catch(err)
+        {
+            alert("Invalid JSON file");
+        }
+    }
+
+    function CreateNew()
+    {
+        setStoryData(null);
+        setView("editor");
+    }
+
+    if (view === "editor") {
+    return (
+        <ReactFlowProvider>
+            <EditorArea initialData={storyData} />
+        </ReactFlowProvider>
+    );
+}
+
+    return (
+        <div className="w-full h-screen bg-dark-blue-black flex flex-col justify-center items-center p-6 text-white font-outfit">
+            <div className="mb-12 text-center">
+                <h1 className="text-6xl font-bold tracking-tighter mb-2">
+                    NODE <span className="text-tiger-orange">Stories</span>
+                </h1>
+                <p className="text-white/40">Visual Story Builder. No Login. No Cloud. 100% Local.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+                {/* Create New Card */}
+                <button onClick={CreateNew} className="group h-64 bg-deep-space-blue border border-white/10 rounded-2xl p-8 flex flex-col justify-center items-center hover:border-tiger-orange hover:bg-shadow-grey transition-all cursor-pointer">
+                    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <FontAwesomeIcon icon={faPlus} className="text-3xl text-tiger-orange" />
+                    </div>
+                    <h2 className="text-2xl font-semibold mb-2">Create New</h2>
+                    <p className="text-white/40 text-sm text-center">Start a new visual novel from scratch.</p>
+                </button>
+
+                {/* Import Card */}
+                <div className="relative group h-64 bg-deep-space-blue border border-white/10 rounded-2xl p-8 flex flex-col justify-center items-center hover:border-tiger-orange hover:bg-shadow-grey transition-all">
+                    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <FontAwesomeIcon icon={faFileUpload} className="text-3xl text-blue-400" />
+                    </div>
+                    <h2 className="text-2xl font-semibold mb-2">Open File</h2>
+                    <p className="text-white/40 text-sm text-center">Load a previously saved .json story file.</p>
+                    <input type="file" accept=".json" onChange={HandleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                </div>
+            </div>
+
+            <div className="mt-12 flex gap-4 text-white/20 text-sm">
+                <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faProjectDiagram} />
+                    <span>Based on React Flow</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\CustomNodes\NodeWrapper.js =====
+
+import React from "react";
+import { Handle, Position } from "@xyflow/react";
+import Toolbar from "../NodeToolbar";
+
+export default function NodeWrapper({ id, selected, children, onAddChoice, onDeleteNode })
+{
+    // More refined border and shadow logic
+    const containerClasses = selected 
+        ? "ring-2 ring-tiger-orange border-transparent shadow-[0_0_15px_rgba(249,115,22,0.3)]" 
+        : "border border-white/10 hover:border-white/20 shadow-xl";
+
+    return (
+        <div className={`bg-shadow-grey w-72 rounded-xl transition-all duration-300 relative group/node ${containerClasses}`}>
+            {/* Styled Handle */}
+            <Handle 
+                type="target" 
+                position={Position.Left} 
+                className="!bg-white !w-3 !h-3 !-ml-1.5 !border-2 !border-shadow-grey"
+            />
+            
+            {/* Header / Toolbar */}
+            <div className="p-3 border-b border-white/5">
+                <Toolbar onAddChoice={onAddChoice} onDeleteNode={onDeleteNode} />
+            </div>
+
+            {/* Content Body */}
+            <div className="p-4 flex flex-col gap-4 nodrag cursor-default">
+                {children}
+            </div>
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\CustomNodes\NormalSlideNode.js =====
+
+"use client";
+import React, { useCallback } from "react";
+import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faAlignLeft } from "@fortawesome/free-solid-svg-icons";
+import NodeWrapper from "./NodeWrapper";
+import Choices from "../Choices";
+
+export default function NormalSlideNode({ id, selected, data })
+{
+    const { updateNodeData, setNodes, setEdges } = useReactFlow();
+    const updateNodeInternals = useUpdateNodeInternals();
+    const handleTextChange = useCallback((e) => updateNodeData(id, { text: e.target.value }), [id, updateNodeData]);
+    
+    const handleChoiceChange = useCallback((idx, newValue) => {
+            const newChoices = [...(data.choices || [])];
+            newChoices[idx] = { ...newChoices[idx], content: newValue };
+            updateNodeData(id, { choices: newChoices });
+        }, [id, data.choices, updateNodeData]
+    );
+
+    const addChoice = useCallback(() => {
+        const currentChoices = data.choices || [];
+        if (currentChoices.length >= 6) return;
+        updateNodeData(id, { choices: [...currentChoices, { content: "", connection: null }] });
+        setTimeout(() => updateNodeInternals(id), 0);
+    }, [id, data.choices, updateNodeData, updateNodeInternals]);
+
+    const deleteNode = useCallback(() => {
+        setNodes((nds) => nds.filter((n) => n.id !== id));
+        setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    }, [id, setNodes, setEdges]);
+
+    return (
+        <NodeWrapper id={id} selected={selected} onAddChoice={addChoice} onDeleteNode={deleteNode}>
+            <div className="group">
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 flex items-center gap-2 group-hover:text-tiger-orange transition-colors">
+                    <FontAwesomeIcon icon={faAlignLeft} className="text-sm" />
+                    <span>Story Content</span>
+                </label>
+                
+                <textarea value={data.text || ""} onChange={handleTextChange} placeholder="Write the main story text here..." 
+                    className="bg-black/20 text-white rounded-lg p-4 text-sm font-light w-full h-48 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange border border-white/5 transition-all placeholder:text-white/20 leading-relaxed"/>
+            </div>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Decisions</label>
+                <Choices choices={data.choices || []} onChoiceChange={handleChoiceChange}/>
+            </div>
+        </NodeWrapper>
+    );
+}
+
+===== D:\Projects\azuned\src\components\CustomNodes\TextAudioSlideNode.js =====
+
+"use client";
+
+import React, { useState, useEffect} from "react";
+import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMusic, faCloudUploadAlt } from "@fortawesome/free-solid-svg-icons";
+import { SaveFileToIndexedDB, LoadFileFromIndexedDB } from "@/utils/FileUtils";
+import NodeWrapper from "./NodeWrapper";
+import Choices from "../Choices";
+
+export default function TextAudioSlideNode({ id, selected, data })
+{
+    const { updateNodeData, setNodes, setEdges } = useReactFlow();
+    const updateNodeInternals = useUpdateNodeInternals();
+    const [audioUrl, setAudioUrl] = useState(undefined);
+
+    useEffect(() => 
+    {
+        async function GetNewMediaUrl()
+        {
+            if(data?.key)
+            {
+                const url = await LoadFileFromIndexedDB(id);
+                if(url) setAudioUrl(url);
+            }
+        }
+
+        GetNewMediaUrl();
+    },[])
+
+    async function HandleAudioUpload(e)
+    {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try
+        {
+            const saved = await SaveFileToIndexedDB(id,file);
+            if(!saved) throw new Error('Unable to save audio file');
+            
+            const url = await LoadFileFromIndexedDB(id);
+            if(!url) throw new Error("Failed to load video");
+
+            setAudioUrl(url);
+            updateNodeData(id, { key: url });
+        }
+        catch (error)
+        {
+            console.error("Failed to load audio", error);
+        }
+    }
+
+    function HandleTextChange(e)
+    {
+        updateNodeData(id, { text: e.target.value });
+    }
+
+    function HandleChoiceChange(idx, val)
+    {
+        const newChoices = [...(data.choices || [])];
+        newChoices[idx] = { ...newChoices[idx], content: val };
+        updateNodeData(id, { choices: newChoices });
+    }
+
+    function AddChoice()
+    {
+        const current = data.choices || [];
+        if (current.length >= 6) return;
+        updateNodeData(id, { choices: [...current, { content: "", connection: null }] });
+        setTimeout(() => updateNodeInternals(id), 0);
+    }
+
+    function DeleteNode()
+    {
+        setNodes((nds) => nds.filter((n) => n.id !== id));
+        setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    }
+
+    return (
+        <NodeWrapper id={id} selected={selected} onAddChoice={AddChoice} onDeleteNode={DeleteNode}>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Audio Source</label>
+                <div className="relative w-full h-14 bg-black/20 rounded-lg border border-dashed border-white/10 hover:border-tiger-orange/50 transition-colors overflow-hidden group flex justify-center items-center">
+                    {audioUrl ? (
+                        <audio src={audioUrl} controls className="w-11/12 h-8" />
+                    ) : (
+                        <Placeholder/>
+                    )}
+                    <input type="file" accept="audio/*" onChange={HandleAudioUpload} className={`absolute inset-0 opacity-0 cursor-pointer ${audioUrl ? 'hidden group-hover:block' : 'block'}`} />
+                    {audioUrl && <Overlay/>}
+                </div>
+            </div>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Caption</label>
+                <textarea 
+                    value={data.text || ""} 
+                    onChange={HandleTextChange} 
+                    placeholder="Write your dialogue here..." 
+                    className="bg-black/20 text-white rounded-md p-3 text-sm font-light w-full h-20 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange border border-white/5 transition-all placeholder:text-white/20"
+                />
+            </div>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Decisions</label>
+                <Choices choices={data.choices || []} onChoiceChange={HandleChoiceChange} />
+            </div>
+        </NodeWrapper>
+    );
+}
+
+function Placeholder()
+{
+    return (
+        <div className="flex flex-row items-center gap-2 text-white/30 pointer-events-none">
+            <FontAwesomeIcon icon={faMusic} className="text-sm" />
+            <span className="text-[10px] font-medium">Select Audio File</span>
+        </div>
+    );
+}
+
+function Overlay()
+{
+    return (
+        <div className="absolute inset-0 bg-shadow-grey/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none backdrop-blur-sm">
+            <FontAwesomeIcon icon={faCloudUploadAlt} className="text-tiger-orange text-lg" />
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\CustomNodes\TextImageSlideNode.js =====
+
+"use client";
+
+import React, { useState } from "react";
+import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCloudUploadAlt, faImage } from "@fortawesome/free-solid-svg-icons";
+import { SaveFileToIndexedDB, LoadFileFromIndexedDB } from "@/utils/FileUtils";
+import { useEffect } from "react";
+import NodeWrapper from "./NodeWrapper";
+import Choices from "../Choices";
+
+export default function TextImageSlideNode({ id, selected, data })
+{
+    const { updateNodeData, setNodes, setEdges } = useReactFlow();
+    const updateNodeInternals = useUpdateNodeInternals();
+    const [previewUrl, setPreviewUrl] = useState(undefined);
+
+    useEffect(() => 
+    {
+        async function GetNewMediaUrl()
+        {
+            if(data?.key)
+            {
+                const url = await LoadFileFromIndexedDB(id);
+                if(url) setPreviewUrl(url);
+            }
+        }
+
+        GetNewMediaUrl();
+    },[])
+
+    async function HandleImageUpload(e)
+    {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try
+        {
+            const saved = await SaveFileToIndexedDB(id, file);
+            if(!saved) throw new Error('Unable to save image file');
+            
+            const url = await LoadFileFromIndexedDB(id);
+            if(!url) throw new Error("Failed to load video");
+
+            setPreviewUrl(url);
+            updateNodeData(id, { key: url });
+        }
+        catch(error)
+        {
+            console.error(error);
+        }
+    }
+
+    function HandleTextChange(e)
+    {
+        updateNodeData(id, { text: e.target.value });
+    }
+
+    function HandleChoiceChange(idx, val)
+    {
+        const newChoices = [...(data.choices || [])];
+        newChoices[idx] = { ...newChoices[idx], content: val };
+        updateNodeData(id, { choices: newChoices });
+    }
+
+    function AddChoice()
+    {
+        const current = data.choices || [];
+        if (current.length >= 6) return;
+        updateNodeData(id, { choices: [...current, { content: "", connection: null }] });
+        setTimeout(() => updateNodeInternals(id), 0);
+    }
+
+    function DeleteNode()
+    {
+        setNodes((nds) => nds.filter((n) => n.id !== id));
+        setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    }
+
+    return (
+        <NodeWrapper id={id} selected={selected} onAddChoice={AddChoice} onDeleteNode={DeleteNode}>
+            <div className="group">
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block group-hover:text-tiger-orange transition-colors">Visual</label>
+                <div className="relative w-full aspect-[16/9] bg-black/20 rounded-lg border border-dashed border-white/10 hover:border-tiger-orange/50 transition-colors overflow-hidden group/image">
+                    {previewUrl ? (
+                        <img src={previewUrl} className="w-full h-full object-cover" alt="Slide" />
+                    ) : (
+                        <Placeholder/>
+                    )}
+                    <input type="file" accept="image/*" onChange={HandleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    {previewUrl && <Overlay/>}
+                </div>
+            </div>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Caption</label>
+                <textarea 
+                    value={data.text || ""} 
+                    onChange={HandleTextChange} 
+                    placeholder="Describe the scene..." 
+                    className="bg-black/20 text-white rounded-md p-3 text-sm font-light w-full h-20 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange border border-white/5 transition-all placeholder:text-white/20"
+                />
+            </div>
+            <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Decisions</label>
+                <Choices choices={data.choices || []} onChoiceChange={HandleChoiceChange} />
+            </div>
+        </NodeWrapper>
+    );
+}
+
+function Placeholder()
+{
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-white/20 pointer-events-none transition-colors group-hover/image:text-white/40">
+            <FontAwesomeIcon icon={faImage} className="text-2xl mb-2" />
+            <span className="text-[10px] font-medium">Drop Image Here</span>
+        </div>
+    );
+}
+
+function Overlay()
+{
+    return (
+        <div className="absolute inset-0 bg-shadow-grey/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none backdrop-blur-sm">
+            <FontAwesomeIcon icon={faCloudUploadAlt} className="text-tiger-orange text-xl" />
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\CustomNodes\TextVideoSlideNode.js =====
+
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCloudUploadAlt, faStopwatch, faVideo} from "@fortawesome/free-solid-svg-icons";
+import { SaveFileToIndexedDB, LoadFileFromIndexedDB } from "@/utils/FileUtils";
+import NodeWrapper from "./NodeWrapper";
+import Choices from "../Choices";
+
+export default function TextVideoSlideNode({ id, selected, data }) 
+{
+  const { updateNodeData, setNodes, setEdges } = useReactFlow();
+  const updateNodeInternals = useUpdateNodeInternals();
+  const [videoUrl, setVideoUrl] = useState(undefined);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+
+  useEffect(() => 
+  {
+      async function GetNewMediaUrl()
+      {
+          if(data?.key)
+          {
+              const url = await LoadFileFromIndexedDB(id);
+              if(url) setVideoUrl(url);
+          }
+      }
+      
+      GetNewMediaUrl();
+  },[])
+
+  const handleVideoUpload = async (e) => 
+  {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsLoadingMedia(true);
+
+    try 
+    {
+      const saved = await SaveFileToIndexedDB(id,file);
+      if(!saved) throw new Error("Failed to save video");
+
+      const url = await LoadFileFromIndexedDB(id);
+      if(!url) throw new Error("Failed to load video");
+      
+      setVideoUrl(url);
+      updateNodeData(id, { key: url });
+      setIsLoadingMedia(false);
+    }
+    catch (err) 
+    {
+      console.error("Video save failed", err);
+      setIsLoadingMedia(false);
+    }
+  };
+
+  const handleTextChange = (e) => {
+    updateNodeData(id, { text: e.target.value });
+  };
+
+  const handleChoiceChange = (idx, val) => {
+    const newChoices = [...(data.choices || [])];
+    newChoices[idx] = { ...newChoices[idx], content: val };
+    updateNodeData(id, { choices: newChoices });
+  };
+
+  const addChoice = () => {
+    const current = data.choices || [];
+    if (current.length >= 6) return;
+    updateNodeData(id, { choices: [...current, { content: "", connection: null }] });
+    setTimeout(() => updateNodeInternals(id), 0);
+  };
+
+  const deleteNode = () => {
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+  };
+
+  return (
+    <NodeWrapper id={id} selected={selected} onAddChoice={addChoice} onDeleteNode={deleteNode}>
+        {/* Video Section */}
+        <div className="group">
+            <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block group-hover:text-tiger-orange transition-colors">Cinematic</label>
+            <VideoUploadContainer
+                videoUrl={videoUrl}
+                isLoadingMedia={isLoadingMedia}
+                setIsLoadingMedia={setIsLoadingMedia}
+                onVideoUpload={handleVideoUpload}
+            />
+        </div>
+
+        {/* Caption Section */}
+        <div>
+            <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Caption</label>
+            <textarea
+                value={data.text || ""}
+                onChange={handleTextChange}
+                placeholder="Video narration..."
+                className="bg-black/20 text-white rounded-md p-3 text-sm font-light w-full h-20 resize-y focus:outline-none focus:ring-1 focus:ring-tiger-orange border border-white/5 transition-all placeholder:text-white/20"
+            />
+        </div>
+
+        {/* Choices Section */}
+        <div>
+            <label className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 block">Decisions</label>
+            <Choices choices={data.choices || []} onChoiceChange={handleChoiceChange} />
+        </div>
+    </NodeWrapper>
+  );
+}
+
+function VideoUploadContainer({videoUrl, isLoadingMedia, setIsLoadingMedia, onVideoUpload}) 
+{
+  return (
+    <div className="relative w-full aspect-[16/9] bg-black/20 rounded-lg border border-dashed border-white/10 hover:border-tiger-orange/50 transition-colors overflow-hidden group/video">
+      {videoUrl && <VideoPreview videoUrl={videoUrl} setIsLoadingMedia={setIsLoadingMedia}/>}
+      {isLoadingMedia && <VideoLoadingState />}
+      {!videoUrl && !isLoadingMedia && <VideoUploadPlaceholder />}
+
+      <input type="file" accept="video/*" onChange={onVideoUpload} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Upload video"/>
+      <VideoUploadOverlay isVisible={!isLoadingMedia && !!videoUrl} />
+    </div>
+  );
+}
+
+function VideoUploadPlaceholder() 
+{
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-white/20 transition-colors group-hover/video:text-white/40">
+      <FontAwesomeIcon icon={faVideo} className="text-2xl mb-2" />
+      <span className="text-[10px] font-medium">Upload Clip</span>
+    </div>
+  );
+}
+
+function VideoLoadingState() 
+{
+  return (
+    <div className="flex items-center justify-center h-full">
+      <FontAwesomeIcon icon={faStopwatch} className="text-xl text-tiger-orange" bounce />
+    </div>
+  );
+}
+
+function VideoPreview({ videoUrl, setIsLoadingMedia }) 
+{
+  return (
+    <video src={videoUrl} className="w-full h-full object-cover" controls={false} muted onLoadedData={() => setIsLoadingMedia(false)} />
+  );
+}
+
+function VideoUploadOverlay({ isVisible }) 
+{
+  if (!isVisible) return null;
+  return (
+    <div className="absolute inset-0 bg-shadow-grey/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none backdrop-blur-sm">
+      <FontAwesomeIcon icon={faCloudUploadAlt} className="text-tiger-orange text-xl" />
+    </div>
+  );
+}
+
+===== D:\Projects\azuned\src\components\Modals\SettingsModal.js =====
+
+import React, { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGear, faPaintBrush, faSlidersH, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { GeneralTabContent } from "@/components/SettingsTabContent/GeneralTabContent";
+import { AppearanceTabContent } from "@/components/SettingsTabContent/AppearanceTabContent";
+import { AdvancedTabContent } from "@/components/SettingsTabContent/AdvancedTabContent";
+
+const TABS = [
+    { id: "general", label: "General", icon: faGear, Component: GeneralTabContent },
+    { id: "appearance", label: "Design", icon: faPaintBrush, Component: AppearanceTabContent },
+    { id: "advanced", label: "Advanced", icon: faSlidersH, Component: AdvancedTabContent },
+];
+
+export default function SettingsModal(props)
+{
+    const [activeTabId, setActiveTabId] = useState("general");
+    const ActiveComponent = TABS.find((t) => t.id === activeTabId)?.Component;
+
+    if (!props.isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-2xl bg-shadow-grey border border-white/10 rounded-xl shadow-2xl flex flex-col h-[600px] overflow-hidden">
+                
+                {/* Header */}
+                <div className="flex justify-between items-center p-4 border-b border-white/10 bg-white/5">
+                    <h2 className="text-white font-semibold text-lg">Story Settings</h2>
+                    <button onClick={props.onClose} className="text-white/50 hover:text-white transition-colors">
+                        <FontAwesomeIcon icon={faTimes} className="text-xl" />
+                    </button>
+                </div>
+
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Sidebar Tabs */}
+                    <div className="w-48 bg-deep-space-blue/50 border-r border-white/10 p-2 space-y-1">
+                        {TABS.map((tab) => (
+                            <button key={tab.id} onClick={() => setActiveTabId(tab.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all ${activeTabId === tab.id ? "bg-tiger-orange text-white" : "text-white/60 hover:bg-white/5"}`}>
+                                <FontAwesomeIcon icon={tab.icon} />
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-dark-blue-black">
+                        {ActiveComponent && <ActiveComponent {...props} />}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\SettingsTabContent\AdvancedTabContent.js =====
+
+import Accordion from "../Accordion";
+
+export function AdvancedTabContent({ timing, setTiming }) {
+    return (
+        <div className="text-white/80">
+            <Accordion title="Playback Settings" defaultOpen={true}>
+                <div className="flex items-center justify-between">
+                    <label className="text-sm text-white/70">
+                        Choice Reveal Delay (sec)
+                    </label>
+                    <input
+                        type="number"
+                        value={timing?.delay || 0}
+                        onChange={(e) =>
+                            setTiming({
+                                ...timing,
+                                delay: Math.max(
+                                    0,
+                                    parseFloat(e.target.value) || 0
+                                ),
+                            })
+                        }
+                        step={0.5}
+                        min={0}
+                        max={10}
+                        className="w-16 bg-deep-space-blue p-1 rounded text-center focus:ring-1 focus:ring-tiger-orange outline-none"
+                    />
+                </div>
+            </Accordion>
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\SettingsTabContent\AppearanceTabContent.js =====
+
+import React from "react";
+import Accordion from "../Accordion";
+
+const GRADIENT_PRESETS = [
+    { name: "Midnight", from: "#0f172a", to: "#020617" },
+    { name: "Lavender", from: "#a18cd1", to: "#fbc2eb" },
+    { name: "Sunset", from: "#f6d365", to: "#fda085" },
+];
+
+export function AppearanceTabContent({ appearance, setAppearance }) {
+    const updateAppearance = (key, value) => {
+        setAppearance((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const ColorInput = ({ label, value, onChange }) => (
+        <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-white/60">{label}</span>
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono opacity-50">
+                    {value}
+                </span>
+                <input
+                    type="color"
+                    value={value || "#000000"}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-8 h-8 rounded cursor-pointer border-none bg-transparent"
+                />
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="text-white/80 h-full overflow-y-auto pb-20 custom-scrollbar">
+            <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+      `}</style>
+
+            <Accordion
+                title="Global Background"
+                defaultOpen={true}
+                className="mb-4"
+            >
+                <ColorInput
+                    label="Gradient Start"
+                    value={appearance?.bg_from || "#0f172a"}
+                    onChange={(v) => updateAppearance("bg_from", v)}
+                />
+                <ColorInput
+                    label="Gradient End"
+                    value={appearance?.bg_to || "#020617"}
+                    onChange={(v) => updateAppearance("bg_to", v)}
+                />
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                    {GRADIENT_PRESETS.map((p) => (
+                        <div
+                            key={p.name}
+                            onClick={() => {
+                                updateAppearance("bg_from", p.from);
+                                updateAppearance("bg_to", p.to);
+                            }}
+                            className="h-8 rounded cursor-pointer border border-white/10 hover:scale-105 transition"
+                            style={{
+                                background: `linear-gradient(135deg, ${p.from}, ${p.to})`,
+                            }}
+                            title={p.name}
+                        />
+                    ))}
+                </div>
+            </Accordion>
+
+            <Accordion title="Choice Buttons" className="mb-4">
+                <h4 className="text-xs uppercase font-bold text-white/40 mb-2">
+                    Normal State
+                </h4>
+                <ColorInput
+                    label="From"
+                    value={appearance?.option_from || "#ffffff"}
+                    onChange={(v) => updateAppearance("option_from", v)}
+                />
+                <ColorInput
+                    label="To"
+                    value={appearance?.option_to || "#eeeeee"}
+                    onChange={(v) => updateAppearance("option_to", v)}
+                />
+
+                <h4 className="text-xs uppercase font-bold text-white/40 mb-2 mt-4">
+                    Hover State
+                </h4>
+                <ColorInput
+                    label="From"
+                    value={appearance?.hovered_option_from || "#ED8836"}
+                    onChange={(v) => updateAppearance("hovered_option_from", v)}
+                />
+                <ColorInput
+                    label="To"
+                    value={appearance?.hovered_option_to || "#FB923C"}
+                    onChange={(v) => updateAppearance("hovered_option_to", v)}
+                />
+            </Accordion>
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\SettingsTabContent\GeneralTabContent.js =====
+
+import Accordion from "../Accordion";
+
+export function GeneralTabContent({name, description, setName, setDescription})
+{
+    return (
+        <div className="text-white/80 space-y-4">
+            <Accordion title="Story Metadata" defaultOpen={true}>
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-xs text-white/50 block mb-1">
+                            Story Title
+                        </label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full p-2 rounded bg-deep-space-blue text-white/90 focus:ring-1 focus:ring-tiger-orange outline-none"
+                            placeholder="My Awesome Story"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs text-white/50 block mb-1">
+                            Description
+                        </label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="w-full p-2 h-24 rounded bg-deep-space-blue text-white/90 focus:ring-1 focus:ring-tiger-orange outline-none resize-none"
+                            placeholder="Brief summary..."
+                        />
+                    </div>
+                </div>
+            </Accordion>
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\Accordion.js =====
+
+import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronCircleDown } from "@fortawesome/free-solid-svg-icons";
+
+export default function Accordion({title,children,defaultOpen = false,className = ""})
+{
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    return (
+        <div
+            className={`border border-white/10 rounded-lg overflow-hidden hover:border-white/20 transition-colors ${className}`}
+        >
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full px-4 py-3 flex items-center justify-between cursor-pointer bg-white/5 hover:bg-white/10 transition-colors focus:outline-none"
+            >
+                <h3 className="text-sm font-semibold text-white/90">{title}</h3>
+                <FontAwesomeIcon
+                    icon={faChevronCircleDown}
+                    className={`text-white/60 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+                />
+            </button>
+            {isOpen && (
+                <div className="px-4 py-4 bg-black/20 border-t border-white/5 space-y-4">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\Choices.js =====
+
+import { Handle, Position } from "@xyflow/react";
+import React from "react";
+
+function Choices({ choices = [], onChoiceChange }) 
+{
+    return (
+        <div className="flex flex-col gap-2 mt-2">
+            {choices.map((choice, idx) => (
+                <div key={idx} className="relative group">
+                    <input
+                        type="text"
+                        value={choice.content}
+                        onChange={(e) => onChoiceChange(idx, e.target.value)}
+                        placeholder={`Option ${idx + 1}`}
+                        className="bg-deep-space-blue w-full rounded p-1.5 text-xs font-light text-white/90 border border-transparent focus:border-tiger-orange focus:outline-none transition-colors placeholder:text-white/30"
+                    />
+                    {/* Handle for connecting to other nodes */}
+                    <Handle
+                        type="source"
+                        position={Position.Right}
+                        id={`handle-${idx}`}
+                        className="!bg-tiger-orange !w-3 !h-3 !-right-1.5"
+                    />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+export default React.memo(Choices);
+
+===== D:\Projects\azuned\src\components\EditorArea.js =====
+
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
+import { ReactFlow, Background, BackgroundVariant, applyNodeChanges, applyEdgeChanges, addEdge, useReactFlow } from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+
+// Components
+import NormalSlideNode from "@/components/CustomNodes/NormalSlideNode";
+import TextImageSlideNode from "@/components/CustomNodes/TextImageSlideNode";
+import TextVideoSlideNode from "@/components/CustomNodes/TextVideoSlideNode";
+import TextAudioSlideNode from "@/components/CustomNodes/TextAudioSlideNode";
+import { PaneContextMenu, EdgeContextMenu, ContextMenu } from "@/components/EditorMenu";
+import EditorToolbar from "@/components/EditorToolbar";
+import SettingsModal from "@/components/Modals/SettingsModal";
+import { DownloadStoryJson } from "@/utils/FileUtils";
+
+const NODE_TYPES = 
+{ 
+    normal: NormalSlideNode, 
+    image: TextImageSlideNode, 
+    video: TextVideoSlideNode,
+    audio: TextAudioSlideNode
+};
+
+export default function EditorArea({ initialData }) 
+{
+    const [nodes, setNodes] = useState([]);
+    const [edges, setEdges] = useState([]);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    
+    // Default Metadata
+    const [meta, setMeta] = useState
+    ({
+        name: "Untitled Story",
+        description: "",
+        thumbnailUrl: "",
+        appearance: { bg_from: '#0f172a', bg_to: '#020617', hovered_option_from: '#ED8836', hovered_option_to: '#FB923C', option_from:'#ffffff', option_to:'#e2e2e2' },
+        timing: { delay: 0 },
+    });
+
+    const [menuState, setMenuState] = useState({ isOpen: false, x: 0, y: 0, type: null, edge: null });
+    const { toObject, setViewport } = useReactFlow();
+
+    // Load initial data if provided (from Import)
+    useEffect(() => 
+    {
+        if(initialData)
+        {
+            setMeta({
+                name: initialData.name,
+                description: initialData.description,
+                appearance: initialData.appearance,
+                timing: initialData.timing,
+                thumbnailUrl: initialData.thumbnailUrl
+            });
+            
+            if(initialData.flow)
+            {
+                setNodes(initialData.flow.nodes || []);
+                setEdges(initialData.flow.edges || []);
+                if(initialData.flow.viewport) setViewport(initialData.flow.viewport);
+            }
+        }
+    }, [initialData, setViewport]);
+
+    const OnNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
+    const OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
+    const OnConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, type: "default", animated: true }, eds)), []);
+
+    function GenerateExportData()
+    {
+        const flow = toObject();
+        
+        // Construct the 'slides' array needed for the Player
+        const slides = nodes.map((n) => ({
+            id: n.id,
+            type: n.type,
+            data: {
+                ...n.data,
+                choices: n.data.choices?.map((c, idx) => {
+                    const edge = edges.find((e) => e.source === n.id && e.sourceHandle === `handle-${idx}`);
+                    return { content: c.content, connection: edge?.target || null };
+                }) || [],
+            },
+        }));
+
+        return {
+            version: 1.0,
+            name: meta.name,
+            description: meta.description,
+            appearance: meta.appearance,
+            timing: meta.timing,
+            thumbnailUrl: meta.thumbnailUrl,
+            flow,
+            slides
+        };
+    }
+
+    function HandleExport()
+    {
+        const data = GenerateExportData();
+        DownloadStoryJson(data, meta.name.replace(/\s+/g, "_").toLowerCase());
+    }
+
+    function HandlePlay()
+    {
+        const data = GenerateExportData();
+        // Save to localStorage for the player to read
+        localStorage.setItem("azuned_preview", JSON.stringify(data));
+        window.open("/player/preview", "_blank");
+    }
+
+    // --- Context Menus ---
+    const HandlePaneContextMenu = useCallback((event) => 
+    {
+        event.preventDefault();
+        setMenuState({ isOpen: true, x: event.clientX, y: event.clientY, type: "pane" });
+    }, []);
+
+    const HandleEdgeContextMenu = useCallback((event, edge) => 
+    {
+        event.preventDefault();
+        setMenuState({ isOpen: true, x: event.clientX, y: event.clientY, type: "edge", edge });
+    }, []);
+
+    const AddNode = (type) => 
+    {
+        const id = crypto.randomUUID();
+        const newNode = {
+            id,
+            type,
+            position: { x: menuState.x - 50, y: menuState.y - 50 },
+            data: { text: "", choices: [] },
+        };
+        setNodes((nds) => nds.concat(newNode));
+    };
+
+    const DeleteEdge = (id) => setEdges((eds) => eds.filter((e) => e.id !== id));
+    const CloseMenu = () => setMenuState((prev) => ({ ...prev, isOpen: false }));
+
+    return (
+        <div className="w-screen h-screen bg-dark-blue-black text-white font-outfit">
+            <EditorToolbar onExport={HandleExport} onPlay={HandlePlay} onToggleSettings={() => setIsSettingsOpen(true)} />
+
+            <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={NODE_TYPES}
+                onNodesChange={OnNodesChange}
+                onEdgesChange={OnEdgesChange}
+                onConnect={OnConnect}
+                onPaneContextMenu={HandlePaneContextMenu}
+                onEdgeContextMenu={HandleEdgeContextMenu}
+                onMoveStart={CloseMenu}
+                fitView
+            >
+                <Background variant={BackgroundVariant.Lines} color="#151A24" />
+            </ReactFlow>
+
+            {menuState.isOpen && (
+                <ContextMenu x={menuState.x} y={menuState.y}>
+                    {menuState.type === "pane" ? <PaneContextMenu onAddNode={AddNode} onClose={CloseMenu} /> : <EdgeContextMenu edge={menuState.edge} onDeleteEdge={DeleteEdge} onClose={CloseMenu} />}
+                </ContextMenu>
+            )}
+
+            <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                name={meta.name}
+                setName={(n) => setMeta((m) => ({ ...m, name: n }))}
+                description={meta.description}
+                setDescription={(d) => setMeta((m) => ({ ...m, description: d }))}
+                appearance={meta.appearance}
+                setAppearance={(a) => setMeta((m) => ({ ...m, appearance: a }))}
+                timing={meta.timing}
+                setTiming={(t) => setMeta((m) => ({ ...m, timing: t }))}
+            />
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\EditorMenu.js =====
+
+import React from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileAlt, faImage, faVideo, faTrash, faMusic } from "@fortawesome/free-solid-svg-icons";
+
+export function ContextMenu({ x, y, children })
+{
+    return (
+        <div 
+            className="absolute z-50 bg-shadow-grey/90 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl p-1 min-w-[160px]" 
+            style={{ top: y, left: x }}
+        >
+            {children}
+        </div>
+    );
+}
+
+export function PaneContextMenu({ onAddNode, onClose })
+{
+    const options = [
+        { label: "Normal Slide", icon: faFileAlt, type: "normal" },
+        { label: "Image Slide", icon: faImage, type: "image" },
+        { label: "Video Slide", icon: faVideo, type: "video" },
+        { label: "Audio Slide", icon: faMusic, type: "audio" } 
+    ];
+
+    return (
+        <div className="flex flex-col">
+            {options.map((opt) => (
+                <button
+                    key={opt.type}
+                    onClick={() => 
+                    {
+                        onAddNode(opt.type);
+                        onClose();
+                    }}
+                    className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded transition-colors text-left"
+                >
+                    <FontAwesomeIcon icon={opt.icon} className="w-4" />
+                    <span>{opt.label}</span>
+                </button>
+            ))}
+        </div>
+    );
+}
+
+export function EdgeContextMenu({ edge, onDeleteEdge, onClose })
+{
+    return (
+        <div className="flex flex-col">
+            <button
+                onClick={() => 
+                {
+                    onDeleteEdge(edge.id);
+                    onClose();
+                }}
+                className="flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:text-red-200 hover:bg-white/10 rounded transition-colors text-left"
+            >
+                <FontAwesomeIcon icon={faTrash} className="w-4" />
+                <span>Remove Connection</span>
+            </button>
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\components\EditorToolbar.js =====
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileExport, faPlay, faCog } from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
+
+export default function EditorToolbar({ onExport, onPlay, onToggleSettings })
+{
+  const btnClass = "px-4 py-2 w-full rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5 text-white/80";
+
+  return (
+    <>
+      <div className="absolute top-4 left-4 z-40 flex flex-col items-center gap-2">
+        <Link href="/" className="text-xl mb-5 font-bold text-transparent from-orange-500 to-amber-400 bg-linear-to-r bg-clip-text mr-4 tracking-tight">
+           NODE <span className="text-white text-xs font-normal">Stories</span>
+        </Link>
+        
+        <button onClick={onExport} className={btnClass} title="Download JSON">
+          <FontAwesomeIcon icon={faFileExport} className="w-4 h-4" />
+          <span className="text-sm font-medium">Export</span>
+        </button>
+        
+        <button onClick={onPlay} className={btnClass} title="Preview Story">
+          <FontAwesomeIcon icon={faPlay} className="w-4 h-4" />
+          <span className="text-sm font-medium">Preview</span>
+        </button>
+      </div>
+
+      <div className="absolute top-4 right-4 z-40">
+        <button onClick={onToggleSettings} className={btnClass + `px-2`} title="Settings">
+          <FontAwesomeIcon icon={faCog} className="w-5 h-5" />
+        </button>
+      </div>
+    </>
+  );
+}
+
+===== D:\Projects\azuned\src\components\NodeToolbar.js =====
+
+import { NodeToolbar, Position } from "@xyflow/react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlusCircle, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
+
+export default function Toolbar({ onAddChoice, onDeleteNode }) {
+    return (
+        <NodeToolbar
+            position={Position.Top}
+            className="bg-shadow-grey-2 border border-white/10 rounded-lg flex items-center p-1.5 gap-2 shadow-xl"
+        >
+            <button
+                onClick={onAddChoice}
+                className="text-tiger-orange hover:text-white transition-colors p-1"
+                title="Add Choice"
+            >
+                <FontAwesomeIcon icon={faPlusCircle} className="text-lg" />
+            </button>
+            <div className="w-px h-4 bg-white/20 mx-1"></div>
+            <button
+                onClick={onDeleteNode}
+                className="text-red-400 hover:text-red-200 transition-colors p-1"
+                title="Delete Node"
+            >
+                <FontAwesomeIcon icon={faTrashAlt} className="text-lg" />
+            </button>
+        </NodeToolbar>
+    );
+}
+
+===== D:\Projects\azuned\src\components\Player.js =====
+
+'use client';
+
+import { useContext, useState, useRef, useEffect } from "react";
+import { createContext } from "react";
+
+import { faPlay, faPause, faVolumeXmark, faVolumeHigh, faQuestionCircle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useRouter } from "next/navigation";
+
+const GradientContext = createContext(undefined);
+const SlidesContext = createContext(undefined);
+
+export default function PlayerPage({storyJson,id})
+{
+    const slides = storyJson.slides;
+    const [curSlide, setCurSlide] = useState(slides.length > 0 ? slides[0] : undefined);
+    const router = useRouter();
+
+    const {bg_from, bg_to, hovered_option_from, hovered_option_to, option_from, option_to} = storyJson.appearance;
+    const {delay} = storyJson.timing;
+    
+    const bgGradient = `linear-gradient(135deg, ${bg_from}, ${bg_to})`
+    const choiceBtnGradient = `linear-gradient(135deg, ${option_from}, ${option_to})`
+    const choiceBtnHoveredGradient = `linear-gradient(135deg, ${hovered_option_from}, ${hovered_option_to})`
+
+    return (
+        <GradientContext.Provider value={{bgGradient, choiceBtnGradient, choiceBtnHoveredGradient}}>
+            <SlidesContext.Provider value={{slides, curSlide, setCurSlide, delay : delay * 1000}}>
+                {curSlide ? <Slide curSlide={curSlide}/> : <NoSlides router={router} id={id}/>}
+            </SlidesContext.Provider>
+        </GradientContext.Provider>
+    )
+}
+
+function NoSlides({router,id})
+{
+    return (
+        <div className="w-full min-h-screen flex justify-center items-center flex-col bg-dark-blue-black">
+            <FontAwesomeIcon icon={faQuestionCircle} className="text-7xl text-white/50 mb-12"/>
+            <p className="text-lg text-white/70">No Story Data Found</p>
+            <button onClick={() => router.push('/editor/' + id)} className="p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer w-22 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5 mt-4 text-white/50">Back</button>
+        </div>
+    );
+}
+
+function Slide({curSlide})
+{
+    if(curSlide.type === 'normal')
+        return <NormalSlide/>
+    else if(curSlide.type === 'image')
+        return <ImageSlide/>
+    else if(curSlide.type === 'video')
+        return <VideoSlide/>
+}
+
+function NormalSlide()
+{
+    const {bgGradient} = useContext(GradientContext);
+    const {slides, curSlide, setCurSlide, delay} = useContext(SlidesContext);
+    const [showChoices, setShowChoices] = useState(false);
+
+    useEffect(() => {setTimeout(() => setShowChoices(true), delay)},[])
+
+    function changeSlide(slideId)
+    {
+        const next = slides.find((s) => s.id === slideId);
+        if(next) setCurSlide(next);
+    }
+
+    return (
+        <div className='w-full h-full' style={{backgroundImage: bgGradient}}>
+            <div className="w-full outline relative outline-white/10 flex justify-center items-center max-w-[56.25vh] h-screen max-h-screen aspect-9/16 mx-auto" style={{backgroundImage: bgGradient}}>
+                {curSlide.data?.text && <h2 className="px-4 text-white/50 text-2xl font-normal">{curSlide.data.text}</h2>}
+                <div className="absolute w-full h-64 p-4 from-gray-400/10 to-transparent bg-linear-0 bottom-0 flex justify-end gap-2 items-center flex-col">
+                    {showChoices && curSlide.data.choices.map((choice, idx) => <ChoiceButton onClick={() => changeSlide(choice.connection)} key={idx} text={choice.content}/>) }
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function ChoiceButton({text, onClick})
+{
+    const {choiceBtnGradient, choiceBtnHoveredGradient} = useContext(GradientContext);
+    const [hovered, setHovered] = useState(false);
+
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} className="w-full p-2 rounded-lg h-12 hover:text-white cursor-pointer active:scale-90 transition-transform duration-75" style={{backgroundImage: hovered ? choiceBtnHoveredGradient : choiceBtnGradient}}>
+            {text}
+        </button>
+    );
+}
+
+function ImageSlide()
+{
+    const {slides, curSlide, setCurSlide, delay} = useContext(SlidesContext);
+    const [showChoices, setShowChoices] = useState(false);
+
+    useEffect(() => {setTimeout(() => setShowChoices(true), delay)},[])
+
+    function changeSlide(slideId)
+    {
+        const next = slides.find((s) => s.id === slideId);
+        if(next) setCurSlide(next);
+    }
+
+    return (
+        <div className='w-full h-full relative overflow-hidden bg-center bg-no-repeat bg-cover' style={{backgroundImage: `url('${curSlide.data.key}')`}}>
+            <div className='absolute inset-0 bg-no-repeat bg-cover bg-center backdrop-blur-xl brightness-30'></div>
+            <div className="w-full outline relative outline-white/10 flex flex-col justify-center items-center max-w-[56.25vh] h-screen max-h-screen aspect-9/16 mx-auto bg-center" style={{backgroundImage: `url('${curSlide.data.key}')`}}>
+                <div className="absolute w-full h-64 p-4 from-gray-400/10 to-transparent bg-linear-0 bottom-0 flex justify-end gap-2 items-center flex-col">
+                    <h2 className="text-white/70 bg-dark-blue-black/30 backdrop-blur-xs w-full rounded p-2 text-center">{curSlide.data.text}</h2>
+                    {showChoices && curSlide.data.choices.map((choice, idx) => <ChoiceButton onClick={() => changeSlide(choice.connection)} key={idx} text={choice.content}/>) }
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function VideoSlide()
+{
+    const {slides, curSlide, setCurSlide, delay} = useContext(SlidesContext);
+    const [showControls, setShowControls] = useState(false);
+    const [paused, setPaused] = useState(false);
+    const [muted, setMuted] = useState(true);
+    const [showChoices, setShowChoices] = useState(false);
+    const videoRef = useRef(null);
+    const timeoutRef = useRef(null);
+
+    useEffect(() => {setTimeout(() => setShowChoices(true), delay)},[])
+
+    function changeSlide(slideId)
+    {
+        const next = slides.find((s) => s.id === slideId);
+        if(next) setCurSlide(next);
+    }
+
+    function showTemporaryControls()
+    {
+        setShowControls(true);
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => setShowControls(false), 3000);
+    }
+
+    function togglePlay()
+    {
+        if(!videoRef.current) return;
+        if(videoRef.current.paused)
+        {
+            videoRef.current.play();
+            setPaused(false);
+        }
+        else
+        {
+            videoRef.current.pause();
+            setPaused(true);
+        }
+        showTemporaryControls();
+    }
+
+    function toggleMute()
+    {
+        if(!videoRef.current) return;
+        videoRef.current.muted = !videoRef.current.muted;
+        setMuted(videoRef.current.muted);
+        showTemporaryControls();
+    }
+
+    return (
+        <div className='w-full h-full relative overflow-hidden bg-center bg-no-repeat bg-cover'>
+            <video src={curSlide.data.key} muted loop playsInline className="absolute inset-0 w-full h-full object-cover"/>
+            <div className='absolute inset-0 backdrop-blur-xl brightness-30'></div>
+
+            <div className="w-full outline relative outline-white/10 flex flex-col justify-center items-center max-w-[56.25vh] h-screen max-h-screen aspect-9/16 mx-auto bg-center">
+                
+                <video
+                    ref={videoRef}
+                    src={curSlide.data.key}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    onClick={showTemporaryControls}
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+
+                {showControls && (
+                    <>
+                        <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
+                            <div className="bg-black/40 backdrop-blur-md rounded-full p-6">
+                                <button onClick={togglePlay} className="text-white text-2xl pointer-events-auto">
+                                    <FontAwesomeIcon icon={paused ? faPlay : faPause}/>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full">
+                            <button onClick={toggleMute} className="text-white text-lg">
+                                <FontAwesomeIcon icon={muted ? faVolumeXmark : faVolumeHigh}/>
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                <div className="absolute w-full h-64 p-4 from-gray-400/10 to-transparent bg-linear-0 bottom-0 flex justify-end gap-2 items-center flex-col">
+                    <h2 className="text-white/70 bg-dark-blue-black/30 backdrop-blur-xs w-full rounded p-2 text-center">
+                        {curSlide.data.text}
+                    </h2>
+                    {showChoices && curSlide.data.choices.map((choice, idx) => <ChoiceButton onClick={() => changeSlide(choice.connection)} key={idx} text={choice.content}/>)}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+===== D:\Projects\azuned\src\components\StorySettings.js =====
+
+import React, { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGear, faPaintBrush, faSlidersH, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { GeneralTabContent } from "@/components/SettingsTabContent/GeneralTabContent";
+import { AppearanceTabContent } from "@/components/SettingsTabContent/AppearanceTabContent";
+import { AdvancedTabContent } from "@/components/SettingsTabContent/AdvancedTabContent";
+
+const TABS = [
+    { id: "general", label: "General", icon: faGear, Component: GeneralTabContent },
+    { id: "appearance", label: "Design", icon: faPaintBrush, Component: AppearanceTabContent },
+    { id: "advanced", label: "Advanced", icon: faSlidersH, Component: AdvancedTabContent },
+];
+
+export function Settings({ setIsPreviewVisible, ...props }) {
+    const [activeTabId, setActiveTabId] = useState("general");
+    const ActiveComponent = TABS.find((t) => t.id === activeTabId)?.Component;
+
+    return (
+        <div className="absolute top-0 right-0 h-full w-80 bg-shadow-grey/95 backdrop-blur-xl shadow-[-10px_0_30px_rgba(0,0,0,0.5)] z-50 flex flex-col border-l border-white/10 transition-transform duration-300 ease-in-out">
+            
+            {/* 1. Header Section */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+                <h2 className="text-lg font-bold text-white tracking-wide">
+                    Configuration
+                </h2>
+                <button
+                    onClick={() => setIsPreviewVisible(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                >
+                    <FontAwesomeIcon icon={faTimes} />
+                </button>
+            </div>
+
+            {/* 2. Navigation Tabs (Segmented Control) */}
+            <div className="px-6 py-4">
+                <div className="flex p-1 bg-black/30 rounded-lg border border-white/5">
+                    {TABS.map((tab) => {
+                        const isActive = activeTabId === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTabId(tab.id)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
+                                    isActive
+                                        ? "bg-white/10 text-tiger-orange shadow-sm"
+                                        : "text-white/50 hover:text-white hover:bg-white/5"
+                                }`}
+                            >
+                                <FontAwesomeIcon icon={tab.icon} className={isActive ? "text-tiger-orange" : ""} />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 3. Content Area */}
+            <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar">
+                {/* Fade-in animation wrapper */}
+                <div key={activeTabId} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="mb-4">
+                         <h3 className="text-xs uppercase tracking-widest text-white/30 font-bold mb-1">
+                            {TABS.find(t => t.id === activeTabId)?.label} Settings
+                         </h3>
+                         <div className="h-px w-full bg-gradient-to-r from-white/10 to-transparent"></div>
+                    </div>
+                    
+                    {ActiveComponent && <ActiveComponent {...props} />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+===== D:\Projects\azuned\src\utils\FileUtils.js =====
+
+let _dbPromise = null;
+
+function GetDb()
+{
+    if (_dbPromise) return _dbPromise;
+
+    _dbPromise = new Promise((resolve, reject) =>
+    {
+        const request = indexedDB.open("azuned-db", 1);
+
+        request.onupgradeneeded = () =>
+        {
+            const db = request.result;
+            if (!db.objectStoreNames.contains("media"))
+            {
+                db.createObjectStore("media", { keyPath: "id" });
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+    return _dbPromise;
+}
+
+export async function SaveFileToIndexedDB(id, file)
+{
+    const db = await GetDb();
+    return new Promise((resolve, reject) =>
+    {
+        const tx = db.transaction("media", "readwrite");
+        const store = tx.objectStore("media");
+        store.put({ id: id, file: file });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+export async function LoadFileFromIndexedDB(id)
+{
+    const db = await GetDb();
+    return new Promise((resolve, reject) =>
+    {
+        const tx = db.transaction("media", "readonly");
+        const store = tx.objectStore("media");
+        const req = store.get(id);
+
+        req.onsuccess = () =>
+        {
+            if (!req.result) return resolve(null);
+            const blob = req.result.file;
+            resolve(URL.createObjectURL(blob));
+        };
+
+        req.onerror = () => reject(req.error);
+    });
+}
+
+export function DownloadStoryJson(storyData, fileName)
+{
+    const jsonString = JSON.stringify(storyData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const href = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = `${fileName || "story"}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+}
+
+export function LoadJsonFromFile(file)
+{
+    return new Promise((resolve, reject) =>
+    {
+        const reader = new FileReader();
+        reader.onload = (e) =>
+        {
+            try
+            {
+                const json = JSON.parse(e.target.result);
+                resolve(json);
+            }
+            catch (err)
+            {
+                reject(err);
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsText(file);
+    });
+}

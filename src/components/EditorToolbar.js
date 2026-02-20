@@ -1,67 +1,45 @@
-import { useState } from "react";
-import { faFloppyDisk, faPlay, faUpload, faCog, faCheckCircle, faClock, faX } from "@fortawesome/free-solid-svg-icons";
+    import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileExport, faPlay, faCog, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
 
-export default function EditorToolbar({ onSave, onPlay, onPublish, onToggleSettings })
+export default function EditorToolbar({ onExport, onPlay, onBack, onToggleSettings })
 {
-  const btnClass = "p-2 rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer w-22 hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5";
+    const btnClass = "px-4 py-2 w-full rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5 text-white/80";
 
-  return (
-    <>
-      <div className="absolute top-4 left-4 z-40 flex items-center gap-2">
-        <SaveBtn  onSave={onSave} btnClass={btnClass} />
-        <button onClick={onPlay} className={btnClass} title="Play Preview">
-          <FontAwesomeIcon icon={faPlay} className="w-5 h-5" />
-          <p className="text-sm">Play</p>
-        </button>
-        <div className="w-px h-8 bg-white/15"></div>
-        <button onClick={onPublish} className={btnClass} title="Play Preview">
-          <FontAwesomeIcon icon={faUpload} className="w-5 h-5" />
-          <p className="text-sm">Publish</p>
-        </button>
-      </div>
-      <div className="absolute top-4 right-4 z-40 flex-col gap-2">
-        <button onClick={onToggleSettings} className={btnClass} title="Project Settings">
-          <FontAwesomeIcon icon={faCog} className="w-5 h-5" />
-          <p className="text-sm">Settings</p>
-        </button>
-      </div>
-    </>
-  );
-}
+    return (
+        <>
+            {/* Left Vertical Toolbar */}
+            <div className="absolute top-4 left-4 z-40 flex flex-col items-center gap-2">
+                {/* Back / Brand */}
+                <div className="flex flex-col items-center mb-4">
+                    <button onClick={onBack} className="text-xl font-bold text-transparent from-orange-500 to-amber-400 bg-linear-to-r bg-clip-text tracking-tight cursor-pointer">
+                        NODE
+                        <span className="text-sm font-normal text-white"> Stories</span>
+                    </button>
+                </div>
 
-function SaveBtn({onSave, btnClass})
-{
-  const [state, setState] = useState('normal');
+                {/* Actions */}
+                <button onClick={onExport} className={btnClass} title="Download ZIP">
+                    <FontAwesomeIcon icon={faFileExport} className="w-4 h-4" />
+                    <span className="text-sm font-medium">Export</span>
+                </button>
 
-  async function saveFlow()
-  {
-    setState('saving');
-    const saved = await onSave();
-    if(saved)
-    {
-      setState('success');
-    }
-    else
-    {
-      setState('failed');
-    }
+                <button onClick={onPlay} className={btnClass} title="Preview Story">
+                    <FontAwesomeIcon icon={faPlay} className="w-4 h-4" />
+                    <span className="text-sm font-medium">Preview</span>
+                </button>
+            </div>
 
-    setTimeout(() => setState('normal'), 2000);
-  }
-
-  function Icon(state)
-  {
-    if(state === 'normal') return faFloppyDisk
-    else if(state === 'saving') return faClock
-    else if(state === 'failed') return faX
-    else if(state === 'success') return faCheckCircle
-  }
-
-  return (
-    <button onClick={saveFlow} className={btnClass} title="Save Project">
-      <FontAwesomeIcon icon={Icon(state)} className="w-5 h-5" bounce={state === 'saving'}/>
-      <p className="text-sm">Save</p>
-    </button>
-  );
+            <div className="absolute top-4 right-4 z-40">
+                <button 
+                    onClick={onToggleSettings} 
+                    className="p-2 w-full rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5 text-white/80" 
+                    title="Settings"
+                >
+                    <FontAwesomeIcon icon={faCog} className="w-5 h-5" />
+                </button>
+            </div>
+        </>
+    );
 }

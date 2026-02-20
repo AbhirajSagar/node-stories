@@ -1,15 +1,12 @@
+import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faFileAlt,
-    faImage,
-    faVideo,
-    faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+import { faFileAlt, faImage, faVideo, faTrash, faMusic } from "@fortawesome/free-solid-svg-icons";
 
-export function ContextMenu({ x, y, children }) {
+export function ContextMenu({ x, y, children })
+{
     return (
-        <div
-            className="absolute z-50 bg-shadow-grey/90 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl p-1 min-w-[160px]"
+        <div 
+            className="absolute z-50 bg-shadow-grey/90 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl p-1 min-w-[160px]" 
             style={{ top: y, left: x }}
         >
             {children}
@@ -17,11 +14,13 @@ export function ContextMenu({ x, y, children }) {
     );
 }
 
-export function PaneContextMenu({ onAddNode, onClose }) {
+export function PaneContextMenu({ onAddNode, onClose })
+{
     const options = [
         { label: "Normal Slide", icon: faFileAlt, type: "normal" },
         { label: "Image Slide", icon: faImage, type: "image" },
         { label: "Video Slide", icon: faVideo, type: "video" },
+        { label: "Audio Slide", icon: faMusic, type: "audio" } 
     ];
 
     return (
@@ -29,7 +28,8 @@ export function PaneContextMenu({ onAddNode, onClose }) {
             {options.map((opt) => (
                 <button
                     key={opt.type}
-                    onClick={() => {
+                    onClick={() => 
+                    {
                         onAddNode(opt.type);
                         onClose();
                     }}
@@ -43,11 +43,13 @@ export function PaneContextMenu({ onAddNode, onClose }) {
     );
 }
 
-export function EdgeContextMenu({ edge, onDeleteEdge, onClose }) {
+export function EdgeContextMenu({ edge, onDeleteEdge, onClose })
+{
     return (
         <div className="flex flex-col">
             <button
-                onClick={() => {
+                onClick={() => 
+                {
                     onDeleteEdge(edge.id);
                     onClose();
                 }}
