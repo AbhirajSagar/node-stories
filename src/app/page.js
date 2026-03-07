@@ -2,104 +2,95 @@
 
 import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faFileUpload, faTrash, faFolderOpen, faCirclePlus } from "@fortawesome/free-solid-svg-icons";
-import { GetProjectsList, CreateProject, DeleteProject, ImportProjectFromZip } from "@/utils/FileUtils";
-import EditorArea from "@/components/EditorArea";
-import { ReactFlowProvider } from "@xyflow/react";
+import { faTrash, faFolderOpen, faCirclePlus } from "@fortawesome/free-solid-svg-icons";
+import { GetProjectsList, CreateProject, DeleteProject } from "@/utils/FileUtils";
+import { useRouter } from "next/navigation";
+import CreateProjectModal from "@/components/Modals/CreateProjectModal";
 
 export default function Home() 
 {
-    const [view, setView] = useState("dashboard"); 
     const [projects, setProjects] = useState([]);
-    const [currentProjectId, setCurrentProjectId] = useState(null);
+    const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+    const router = useRouter();
 
     useEffect(() => { RefreshProjects(); }, []);
 
-    function RefreshProjects()
+    async function RefreshProjects()
     {
         setProjects(GetProjectsList());
     }
 
     function HandleCreateNew()
     {
-        const name = prompt("Enter Project Name:", "My Awesome Story");
-        if(!name) return;
-        const id = CreateProject(name);
-        OpenProject(id);
-    }
-
-    async function HandleImport(e)
-    {
-        const file = e.target.files?.[0];
-        if(!file) return;
-        try {
-            const id = await ImportProjectFromZip(file);
-            RefreshProjects();
-            OpenProject(id);
-        } catch(err) {
-            console.error(err);
-            alert("Failed to import project.");
-        }
+        setIsCreateProjectModalOpen(true);
     }
 
     function OpenProject(id)
     {
-        setCurrentProjectId(id);
-        setView("editor");
+        router.push(`/editor/${id}`);
     }
 
     function HandleDelete(id, e)
     {
         e.stopPropagation();
-        if(confirm("Are you sure? This cannot be undone.")) {
+        if(confirm("Are you sure? This cannot be undone.")) 
+        {
             DeleteProject(id);
             RefreshProjects();
         }
     }
 
-    if (view === "editor" && currentProjectId) {
-        return (
-            <ReactFlowProvider>
-                <EditorArea projectId={currentProjectId} onBack={() => { setView("dashboard"); RefreshProjects(); }} />
-            </ReactFlowProvider>
-        );
-    }
-
     return (
-        <div className="w-full min-h-screen bg-dark-blue-black flex flex-col items-center p-6 text-white font-outfit">
-            <div className="mb-12 text-center mt-10 w-full flex justify-between items-center">
-                <div className="flex flex-col items-center mb-4">
-                    <button className="text-6xl font-bold text-transparent from-orange-500 to-amber-400 bg-linear-to-r bg-clip-text tracking-tight cursor-pointer">
-                        NODE
-                        <span className="text-4xl font-normal text-white"> Stories</span>
+        <div className="w-full min-h-screen bg-dark-blue-black text-white font-outfit flex flex-col items-center px-4 py-10">
+            <div className="w-full max-w-5xl">
+                <div className="flex flex-col items-center text-center mb-14">
+                    <div className="flex items-end gap-1">
+                        <h2 className="text-4xl font-extrabold bg-linear-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent tracking-tight">
+                            NODE
+                        </h2>
+                        <span className="text-lg text-white/70">Stories</span>
+                    </div>
+                    <p className="text-white/30 text-sm">
+                        Build and manage your interactive story projects
+                    </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 mb-5 max-w-sm outline-shadow-grey outline-2 p-2 rounded-lg outline-dashed mx-auto">
+                    <button onClick={HandleCreateNew} className="flex-1 relative flex items-center justify-center gap-2 p-2 cursor-pointer rounded-lg bg-shadow-grey hover:bg-deep-space-blue transition-all border border-white/5 text-white/80 hover:text-tiger-orange">
+                        <FontAwesomeIcon icon={faCirclePlus} />
+                        <span>Create Project</span>
                     </button>
                 </div>
-                <div className="gap-2 flex flex-col">
-                    <button onClick={HandleCreateNew} className="px-4 py-2 w-full rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5 text-white/80">
-                        <FontAwesomeIcon icon={faCirclePlus} /> 
-                        New Project
-                    </button>        
-                    <button className="px-4 py-2 w-full rounded-lg  relative bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5 text-white/80">
-                        <FontAwesomeIcon icon={faFolderOpen} /> 
-                        <input type="file" accept=".zip" onChange={HandleImport} className="absolute inset-0 opacity-0 cursor-pointer" />
-                        Import Project
-                    </button>        
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {
+                        projects.length === 0 && 
+                        (
+                            <div className="col-span-full text-center py-16 border border-dashed border-white/10 rounded-2xl text-white/30">
+                                No projects yet. Create your first one.
+                            </div>
+                        )
+                    }
+
+                    {projects.map((p) => (
+                        <div 
+                            key={p.id} 
+                            onClick={() => OpenProject(p.id)} 
+                            className="group flex justify-between bg-shadow-grey/70 backdrop-blur-sm border border-white/5 hover:border-tiger-orange p-4 rounded-lg cursor-pointer transition-all hover:shadow-xl hover:shadow-orange-500/5"
+                        >
+                            <div className="h-full">
+                                <h3 className="text-lg font-semibold group-hover:text-tiger-orange transition-colors">{p.name}</h3>
+                                <p className="text-xs text-white/30">Last Modified · {new Date(p.lastModified).toLocaleDateString()}</p>
+                            </div>
+                            
+                            <div className="flex flex-col h-full justify-center gap-2">
+                                <button onClick={(e) => HandleDelete(p.id, e)} className="h-max bg-shadow-grey outline-white/10 hover:bg-red-700 outline-1 rounded p-2 cursor-pointer">
+                                    <FontAwesomeIcon icon={faTrash}/>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
-
-            <div className="grid w-full gap-2 sm:grid-cols-2">
-                {projects.length === 0 && <p className="col-span-full text-center text-white/20">No projects found. Create one!</p>}
-                
-                {projects.map((p) => (
-                    <div key={p.id} onClick={() => OpenProject(p.id)} className="group bg-shadow-grey border border-white/5 p-6 rounded-xl hover:border-tiger-orange cursor-pointer transition-all relative">
-                        <h3 className="text-xl font-bold mb-2 group-hover:text-tiger-orange transition-colors">{p.name}</h3>
-                        <p className="text-xs text-white/30">Last Modified: {new Date(p.lastModified).toLocaleDateString()}</p>
-                        <button onClick={(e) => HandleDelete(p.id, e)} className="absolute top-4 right-4 text-white/20 hover:text-red-500 p-2 transition-colors">
-                            <FontAwesomeIcon icon={faTrash} />
-                        </button>
-                    </div>
-                ))}
-            </div>
+            {isCreateProjectModalOpen && <CreateProjectModal onClose={() => setIsCreateProjectModalOpen(false)} onCreate={(name) => {CreateProject(name); RefreshProjects();}} />}
         </div>
     );
 }

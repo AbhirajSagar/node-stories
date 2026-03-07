@@ -21,7 +21,7 @@ const NODE_TYPES =
     audio: TextAudioSlideNode
 };
 
-export default function EditorArea({ projectId, onBack }) 
+export default function EditorArea({ projectId }) 
 {
     const [nodes, setNodes] = useState([]);
     const [edges, setEdges] = useState([]);
@@ -133,7 +133,7 @@ export default function EditorArea({ projectId, onBack })
 
     return (
         <div className="w-screen h-screen bg-dark-blue-black text-white font-outfit">
-            <EditorToolbar onExport={HandleExport} onPlay={HandlePlay} onBack={onBack} onToggleSettings={() => setIsSettingsOpen(true)} />
+            <EditorToolbar onExport={HandleExport} onPlay={HandlePlay} onToggleSettings={() => setIsSettingsOpen(true)} />
             <ReactFlow nodes={nodes} edges={edges} nodeTypes={NODE_TYPES} onNodesChange={OnNodesChange} onEdgesChange={OnEdgesChange} onConnect={OnConnect} onPaneContextMenu={HandlePaneContextMenu} onEdgeContextMenu={HandleEdgeContextMenu} onMoveStart={CloseMenu} fitView>
                 <Background variant={BackgroundVariant.Lines} color="#151A24" />
             </ReactFlow>

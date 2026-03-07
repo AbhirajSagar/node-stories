@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, createContext, useContext } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect, createContext, useContext } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faQuestionCircle, faPlay, faPause, faVolumeHigh, faVolumeXmark } from "@fortawesome/free-solid-svg-icons";
+import { faVolumeHigh } from "@fortawesome/free-solid-svg-icons";
+import { LoadFileFromProjectDB } from "@/utils/FileUtils";
 
 const GradientContext = createContext(undefined);
 const SlidesContext = createContext(undefined);
@@ -11,13 +11,9 @@ const SlidesContext = createContext(undefined);
 export default function PlayerPage()
 {
     const [storyData, setStoryData] = useState(null);
-    const params = useParams(); // Keep for structure, though we use localStorage
-    const router = useRouter();
 
     useEffect(() => 
     {
-        // For the tool version, we primarily use "preview" mode from localStorage
-        // OR the user could theoretically upload a file here too, but simpler to read storage.
         const cached = localStorage.getItem("azuned_preview");
         if(cached) setStoryData(JSON.parse(cached));
     }, []);
@@ -27,7 +23,6 @@ export default function PlayerPage()
     const { slides, appearance, timing } = storyData;
     const { bg_from, bg_to, hovered_option_from, hovered_option_to, option_from, option_to } = appearance || {};
     
-    // Fallbacks
     const bgGradient = `linear-gradient(135deg, ${bg_from || '#000'}, ${bg_to || '#333'})`;
     const choiceBtnGradient = `linear-gradient(135deg, ${option_from || '#fff'}, ${option_to || '#eee'})`;
     const choiceBtnHoveredGradient = `linear-gradient(135deg, ${hovered_option_from || 'orange'}, ${hovered_option_to || 'red'})`;
@@ -71,8 +66,6 @@ function StoryRunner({ initialSlide })
         </div>
     );
 }
-
-// Reusable Components for Slides
 
 function ChoicesList({ choices, onChangeSlide })
 {
@@ -127,16 +120,44 @@ function NormalSlide({ curSlide, onChangeSlide })
 
 function MediaSlide({ curSlide, onChangeSlide, type })
 {
+    const [mediaUrl, setMediaUrl] = useState(undefined);
+
+    useEffect(() => 
+    {
+        let activeUrl = null;
+        async function load() 
+        {
+            if (curSlide.data.key && curSlide.data.projectId)
+            {
+                const url = await LoadFileFromProjectDB(curSlide.data.projectId, curSlide.data.key);
+                if (url)
+                {
+                    activeUrl = url;
+                    setMediaUrl(url);
+                }
+            } 
+        }
+
+        load();
+
+        return () => 
+        { 
+            if(activeUrl) 
+                URL.revokeObjectURL(activeUrl); 
+        };
+        
+    }, [curSlide.data.key, curSlide.data.projectId]);
+
     return (
         <div className="w-full h-full relative bg-black">
              {/* Background Blur */}
-            {type === 'image' && <div className="absolute inset-0 bg-cover bg-center blur-2xl opacity-50" style={{ backgroundImage: `url('${curSlide.data.key}')` }}></div>}
+            {type === 'image' && <div className="absolute inset-0 bg-cover bg-center blur-2xl opacity-50" style={{ backgroundImage: `url('${mediaUrl || ''}')` }}></div>}
             
             <div className="relative w-full h-full max-w-[56.25vh] mx-auto bg-black flex flex-col">
                 {type === 'image' ? (
-                    <img src={curSlide.data.key} className="w-full h-full object-cover" alt="Story" />
+                    <img src={mediaUrl} className="w-full h-full object-cover" alt="Story" />
                 ) : (
-                    <video src={curSlide.data.key} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+                    <video src={mediaUrl} autoPlay muted loop playsInline className="w-full h-full object-cover" />
                 )}
                 
                 {curSlide.data.text && (
@@ -153,10 +174,33 @@ function MediaSlide({ curSlide, onChangeSlide, type })
 
 function AudioSlide({ curSlide, onChangeSlide })
 {
+    const [mediaUrl, setMediaUrl] = useState(undefined);
+
+    useEffect(() => {
+        let activeUrl = null;
+        async function load() {
+            if (curSlide.data.key && curSlide.data.projectId) {
+                if (curSlide.data.key.includes('/') || curSlide.data.key.includes('.')) {
+                    setMediaUrl(curSlide.data.key);
+                } else {
+                    const url = await LoadFileFromProjectDB(curSlide.data.projectId, curSlide.data.key);
+                    if (url) {
+                        activeUrl = url;
+                        setMediaUrl(url);
+                    }
+                }
+            } else if (curSlide.data.key) {
+                setMediaUrl(curSlide.data.key); // Fallback
+            }
+        }
+        load();
+        return () => { if(activeUrl) URL.revokeObjectURL(activeUrl); };
+    }, [curSlide.data.key, curSlide.data.projectId]);
+
     // Simplified audio player that auto-plays
     return (
         <div className="w-full h-full flex flex-col justify-center items-center max-w-[56.25vh] mx-auto outline outline-white/5 relative">
-            <audio src={curSlide.data.key} autoPlay loop />
+            <audio src={mediaUrl} autoPlay loop />
             <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center animate-pulse mb-8">
                 <FontAwesomeIcon icon={faVolumeHigh} className="text-4xl text-white/70" />
             </div>

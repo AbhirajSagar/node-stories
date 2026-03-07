@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileExport, faPlay, faCog, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
-export default function EditorToolbar({ onExport, onPlay, onBack, onToggleSettings })
+export default function EditorToolbar({ onExport, onPlay, onToggleSettings })
 {
     const btnClass = "px-4 py-2 w-full rounded-lg bg-shadow-grey flex justify-center gap-2 items-center cursor-pointer hover:bg-deep-space-blue hover:text-tiger-orange transition-colors shadow-lg border border-white/5 text-white/80";
 
@@ -13,7 +13,7 @@ export default function EditorToolbar({ onExport, onPlay, onBack, onToggleSettin
             <div className="absolute top-4 left-4 z-40 flex flex-col items-center gap-2">
                 {/* Back / Brand */}
                 <div className="flex flex-col items-center mb-4">
-                    <button onClick={onBack} className="text-xl font-bold text-transparent from-orange-500 to-amber-400 bg-linear-to-r bg-clip-text tracking-tight cursor-pointer">
+                    <button className="text-xl font-bold text-transparent from-orange-500 to-amber-400 bg-linear-to-r bg-clip-text tracking-tight cursor-pointer">
                         NODE
                         <span className="text-sm font-normal text-white"> Stories</span>
                     </button>

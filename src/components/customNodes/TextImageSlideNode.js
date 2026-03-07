@@ -38,14 +38,19 @@ export default function TextImageSlideNode({ id, selected, data })
 
     async function HandleImageUpload(e)
     {
+        console.log("Uploading file for node " + id);
         const file = e.target.files?.[0];
-        if (!file || !data.projectId) return;
+        if (!file || !data.projectId) 
+            {
+                console.warn("No file or project ID");
+                return;
+            }
 
         try
         {
             await SaveFileToProjectDB(data.projectId, id, file);
             // Update node data to trigger re-renders and mark as having content
-            updateNodeData(id, { key: "exists" });
+            updateNodeData(id, { key: id });
         }
         catch (error)
         {

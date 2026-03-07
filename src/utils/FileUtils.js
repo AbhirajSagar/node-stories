@@ -31,10 +31,13 @@ export async function SaveFileToProjectDB(projectId, mediaId, file)
     {
         const tx = db.transaction("media", "readwrite");
         const store = tx.objectStore("media");
-        // Store the file blob with the ID
         store.put({ id: mediaId, file: file });
         tx.oncomplete = () => resolve(true);
-        tx.onerror = () => reject(tx.error);
+        tx.onerror = () => 
+            {
+                console.log(tx.error);
+                reject(tx.error);
+            }
     });
 }
 
@@ -80,7 +83,8 @@ export function SaveProjectsList(list)
 export function CreateProject(name)
 {
     const id = crypto.randomUUID();
-    const newProject = { 
+    const newProject = 
+    { 
         id, 
         name, 
         lastModified: Date.now() 
@@ -155,48 +159,4 @@ export async function ExportProjectToZip(projectId, storyData)
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(href);
-}
-
-export async function ImportProjectFromZip(file)
-{
-    const zip = await JSZip.loadAsync(file);
-    
-    // 1. Read Story JSON
-    const jsonFile = zip.file("story.json");
-    if(!jsonFile) throw new Error("Invalid Project: Missing story.json");
-    
-    const jsonStr = await jsonFile.async("string");
-    const storyData = JSON.parse(jsonStr);
-
-    // 2. Create new Project ID
-    const projectId = CreateProject(storyData.name + " (Imported)");
-    
-    // 3. Process Assets
-    const slides = storyData.slides;
-    for(const slide of slides)
-    {
-        // Check if slide references an asset (e.g., "assets/uuid.jpg")
-        if(slide.data.key && slide.data.key.startsWith("assets/"))
-        {
-            const assetPath = slide.data.key;
-            const fileInZip = zip.file(assetPath);
-            
-            if(fileInZip)
-            {
-                const blob = await fileInZip.async("blob");
-                // Save to new DB using the Node ID as key
-                await SaveFileToProjectDB(projectId, slide.id, blob);
-                
-                // Update the key in JSON back to the ID for internal use
-                // (Though strictly speaking, internal logic just needs to know it HAS a key, 
-                // the NodeID is the lookup key in DB).
-                slide.data.key = "true"; // Just a flag, node loads by its own ID
-            }
-        }
-    }
-
-    // 4. Save JSON to LocalStorage
-    localStorage.setItem(`azuned_data_${projectId}`, JSON.stringify(storyData));
-    
-    return projectId;
 }

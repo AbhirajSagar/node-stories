@@ -43,7 +43,7 @@ export default function TextVideoSlideNode({ id, selected, data })
         try
         {
             await SaveFileToProjectDB(data.projectId, id, file);
-            updateNodeData(id, { key: "exists" });
+            updateNodeData(id, { key: id });
         }
         catch (err)
         {
